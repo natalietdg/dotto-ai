@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dotto artifacts (regenerated on each run)
+graph.json
+drift.json
+impact.json
+intent.json
+
+# Claude
+.claude/
+
+# Logs
+*.log
+npm-debug.log*

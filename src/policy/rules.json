@@ -1,0 +1,21 @@
+{
+  "rules": [
+    {
+      "id": "no_pii_drift",
+      "description": "PII schemas must never drift without escalation.",
+      "match": {
+        "tags_any": ["pii"]
+      },
+      "action": "escalate"
+    },
+    {
+      "id": "payments_breaking_change",
+      "description": "Breaking changes in payment systems require human approval.",
+      "match": {
+        "systems_any": ["payments"],
+        "breaking": true
+      },
+      "action": "escalate"
+    }
+  ]
+}

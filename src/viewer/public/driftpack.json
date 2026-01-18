@@ -1,0 +1,568 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "repository": "natalietdg/dotto",
+    "branch": "demo",
+    "baseCommit": "b587261869ba01e9002624df37ad8a35064864ba",
+    "headCommit": "fa66e9ca7cad7f013ba055d4a030b56eadf0d759",
+    "author": "Natalie Leong",
+    "timestamp": "2025-11-18T11:33:25.400Z"
+  },
+  "drift": {
+    "summary": {
+      "breaking": 1,
+      "nonBreaking": 3,
+      "filesChanged": 1
+    },
+    "changes": [
+      {
+        "nodeId": "examples/bank-a/risk-engine/RiskDto.ts:RiskCalculationDto",
+        "name": "RiskCalculationDto",
+        "type": "schema",
+        "changeType": "modified",
+        "breaking": true,
+        "changes": [
+          {
+            "type": "field_type_changed",
+            "path": "calculation_id",
+            "oldValue": "string",
+            "newValue": "number",
+            "breaking": true,
+            "description": "Property \"calculation_id\" type changed from \"string\" to \"number\""
+          }
+        ],
+        "oldVersion": {
+          "id": "examples/bank-a/risk-engine/RiskDto.ts:RiskCalculationDto",
+          "type": "schema",
+          "name": "RiskCalculationDto",
+          "filePath": "examples/bank-a/risk-engine/RiskDto.ts",
+          "fileHash": "e99e5651121b6a83a6ec3c624e9c7b7fed2554d9c71e664fb8d0611d5bdb1c86",
+          "metadata": {
+            "kind": "interface"
+          },
+          "properties": [
+            {
+              "name": "calculation_id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "position_id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "symbol",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "quantity",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "avg_entry_price",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "current_market_price",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "price_precision",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "unrealized_pnl",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "realized_pnl",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "total_pnl",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "var_95",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "expected_shortfall",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "timestamp",
+              "type": "Date",
+              "required": true
+            }
+          ],
+          "lastModified": "2025-11-18T11:32:47.050Z"
+        },
+        "newVersion": {
+          "id": "examples/bank-a/risk-engine/RiskDto.ts:RiskCalculationDto",
+          "type": "schema",
+          "name": "RiskCalculationDto",
+          "filePath": "examples/bank-a/risk-engine/RiskDto.ts",
+          "fileHash": "dc995f961dab611450936ea2fe3981cc1e0544573802f1a79020218c7f0b053e",
+          "metadata": {
+            "kind": "interface"
+          },
+          "properties": [
+            {
+              "name": "calculation_id",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "position_id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "symbol",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "quantity",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "avg_entry_price",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "current_market_price",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "price_precision",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "unrealized_pnl",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "realized_pnl",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "total_pnl",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "var_95",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "expected_shortfall",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "timestamp",
+              "type": "Date",
+              "required": true
+            }
+          ],
+          "lastModified": "2025-11-18T11:32:47.090Z"
+        }
+      },
+      {
+        "nodeId": "examples/bank-a/risk-engine/RiskDto.ts:ExposureDto",
+        "name": "ExposureDto",
+        "type": "schema",
+        "changeType": "modified",
+        "breaking": false,
+        "changes": [],
+        "oldVersion": {
+          "id": "examples/bank-a/risk-engine/RiskDto.ts:ExposureDto",
+          "type": "schema",
+          "name": "ExposureDto",
+          "filePath": "examples/bank-a/risk-engine/RiskDto.ts",
+          "fileHash": "e99e5651121b6a83a6ec3c624e9c7b7fed2554d9c71e664fb8d0611d5bdb1c86",
+          "metadata": {
+            "kind": "interface"
+          },
+          "properties": [
+            {
+              "name": "exposure_id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "symbol",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "net_position",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "gross_position",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "market_value",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "notional_value",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "risk_limits",
+              "type": "{\n    position_limit: number;\n    loss_limit: number;\n    var_limit: number;\n  }",
+              "required": true
+            },
+            {
+              "name": "utilization",
+              "type": "{\n    position_pct: number;\n    loss_pct: number;\n    var_pct: number;\n  }",
+              "required": true
+            },
+            {
+              "name": "breaches",
+              "type": "string[]",
+              "required": true
+            },
+            {
+              "name": "timestamp",
+              "type": "Date",
+              "required": true
+            }
+          ],
+          "lastModified": "2025-11-18T11:32:47.050Z"
+        },
+        "newVersion": {
+          "id": "examples/bank-a/risk-engine/RiskDto.ts:ExposureDto",
+          "type": "schema",
+          "name": "ExposureDto",
+          "filePath": "examples/bank-a/risk-engine/RiskDto.ts",
+          "fileHash": "dc995f961dab611450936ea2fe3981cc1e0544573802f1a79020218c7f0b053e",
+          "metadata": {
+            "kind": "interface"
+          },
+          "properties": [
+            {
+              "name": "exposure_id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "symbol",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "net_position",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "gross_position",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "market_value",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "notional_value",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "risk_limits",
+              "type": "{\n    position_limit: number;\n    loss_limit: number;\n    var_limit: number;\n  }",
+              "required": true
+            },
+            {
+              "name": "utilization",
+              "type": "{\n    position_pct: number;\n    loss_pct: number;\n    var_pct: number;\n  }",
+              "required": true
+            },
+            {
+              "name": "breaches",
+              "type": "string[]",
+              "required": true
+            },
+            {
+              "name": "timestamp",
+              "type": "Date",
+              "required": true
+            }
+          ],
+          "lastModified": "2025-11-18T11:32:47.090Z"
+        }
+      },
+      {
+        "nodeId": "examples/bank-a/risk-engine/RiskDto.ts:PortfolioRiskDto",
+        "name": "PortfolioRiskDto",
+        "type": "schema",
+        "changeType": "modified",
+        "breaking": false,
+        "changes": [],
+        "oldVersion": {
+          "id": "examples/bank-a/risk-engine/RiskDto.ts:PortfolioRiskDto",
+          "type": "schema",
+          "name": "PortfolioRiskDto",
+          "filePath": "examples/bank-a/risk-engine/RiskDto.ts",
+          "fileHash": "e99e5651121b6a83a6ec3c624e9c7b7fed2554d9c71e664fb8d0611d5bdb1c86",
+          "metadata": {
+            "kind": "interface"
+          },
+          "properties": [
+            {
+              "name": "portfolio_id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "total_exposure",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "total_pnl",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "portfolio_var",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "sharpe_ratio",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "max_drawdown",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "exposures",
+              "type": "ExposureDto[]",
+              "required": true
+            },
+            {
+              "name": "risk_status",
+              "type": "'NORMAL' | 'WARNING' | 'BREACH'",
+              "required": true
+            },
+            {
+              "name": "timestamp",
+              "type": "Date",
+              "required": true
+            }
+          ],
+          "lastModified": "2025-11-18T11:32:47.050Z"
+        },
+        "newVersion": {
+          "id": "examples/bank-a/risk-engine/RiskDto.ts:PortfolioRiskDto",
+          "type": "schema",
+          "name": "PortfolioRiskDto",
+          "filePath": "examples/bank-a/risk-engine/RiskDto.ts",
+          "fileHash": "dc995f961dab611450936ea2fe3981cc1e0544573802f1a79020218c7f0b053e",
+          "metadata": {
+            "kind": "interface"
+          },
+          "properties": [
+            {
+              "name": "portfolio_id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "total_exposure",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "total_pnl",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "portfolio_var",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "sharpe_ratio",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "max_drawdown",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "exposures",
+              "type": "ExposureDto[]",
+              "required": true
+            },
+            {
+              "name": "risk_status",
+              "type": "'NORMAL' | 'WARNING' | 'BREACH'",
+              "required": true
+            },
+            {
+              "name": "timestamp",
+              "type": "Date",
+              "required": true
+            }
+          ],
+          "lastModified": "2025-11-18T11:32:47.090Z"
+        }
+      },
+      {
+        "nodeId": "examples/bank-a/risk-engine/RiskDto.ts:VaRDto",
+        "name": "VaRDto",
+        "type": "schema",
+        "changeType": "modified",
+        "breaking": false,
+        "changes": [],
+        "oldVersion": {
+          "id": "examples/bank-a/risk-engine/RiskDto.ts:VaRDto",
+          "type": "schema",
+          "name": "VaRDto",
+          "filePath": "examples/bank-a/risk-engine/RiskDto.ts",
+          "fileHash": "e99e5651121b6a83a6ec3c624e9c7b7fed2554d9c71e664fb8d0611d5bdb1c86",
+          "metadata": {
+            "kind": "interface"
+          },
+          "properties": [
+            {
+              "name": "var_id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "portfolio_id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "confidence_level",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "time_horizon_days",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "methodology",
+              "type": "'HISTORICAL' | 'PARAMETRIC' | 'MONTE_CARLO'",
+              "required": true
+            },
+            {
+              "name": "var_amount",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "calculated_at",
+              "type": "Date",
+              "required": true
+            }
+          ],
+          "lastModified": "2025-11-18T11:32:47.050Z"
+        },
+        "newVersion": {
+          "id": "examples/bank-a/risk-engine/RiskDto.ts:VaRDto",
+          "type": "schema",
+          "name": "VaRDto",
+          "filePath": "examples/bank-a/risk-engine/RiskDto.ts",
+          "fileHash": "dc995f961dab611450936ea2fe3981cc1e0544573802f1a79020218c7f0b053e",
+          "metadata": {
+            "kind": "interface"
+          },
+          "properties": [
+            {
+              "name": "var_id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "portfolio_id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "confidence_level",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "time_horizon_days",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "methodology",
+              "type": "'HISTORICAL' | 'PARAMETRIC' | 'MONTE_CARLO'",
+              "required": true
+            },
+            {
+              "name": "var_amount",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "calculated_at",
+              "type": "Date",
+              "required": true
+            }
+          ],
+          "lastModified": "2025-11-18T11:32:47.090Z"
+        }
+      }
+    ]
+  },
+  "intent": {
+    "description": "To change the property calculation_id from string to number",
+    "approvedBy": "Natalie Leong",
+    "timestamp": "2025-11-18T11:33:25.400Z"
+  },
+  "proof": {
+    "hash": "aa3b99703cdab1f684ec6c197cad3c267282df4035aa1fb570323749432eded7",
+    "algorithm": "sha256",
+    "backend": "hedera",
+    "transactionId": "0.0.7224074@30",
+    "timestamp": "2025-11-18T11:51:02.066Z",
+    "link": "https://hashscan.io/testnet/transaction/0.0.7223674@1763466654.621477055"
+  }
+}

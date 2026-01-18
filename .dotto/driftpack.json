@@ -1,0 +1,24 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "repository": "natalietdg/dotto-ai",
+    "branch": "feature/payment-v2",
+    "baseCommit": "9ee33694cd7caedd75d2af288d9e9cc96cb7ecb8",
+    "headCommit": "9ee33694cd7caedd75d2af288d9e9cc96cb7ecb8",
+    "author": "Natalie Leong",
+    "timestamp": "2026-01-15T14:55:47.622Z"
+  },
+  "drift": {
+    "summary": {
+      "breaking": 0,
+      "nonBreaking": 0,
+      "filesChanged": 0
+    },
+    "changes": []
+  },
+  "proof": {
+    "hash": "fda4992ab1d9306eca9fcd6e5d02a687f2f0024e516bbf1a83e02e87e2cb9fe1",
+    "algorithm": "sha256",
+    "backend": "none"
+  }
+}

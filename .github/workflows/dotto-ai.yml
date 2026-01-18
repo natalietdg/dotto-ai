@@ -1,0 +1,62 @@
+name: Dotto-AI Governor
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  govern:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Generate dotto artifacts
+        run: |
+          BASE_REF=''
+          if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+            BASE_REF='${{ github.event.pull_request.base.sha }}'
+          elif [ -n "${{ github.event.before }}" ]; then
+            BASE_REF='${{ github.event.before }}'
+          else
+            BASE_REF='HEAD~1'
+          fi
+          node dist/cli/dotto-generate.js --artifacts artifacts --change-id "$GITHUB_SHA" --base-ref "$BASE_REF"
+
+      - name: Run governor
+        id: governor
+        run: |
+          set +e
+          node dist/server.js --once --artifacts artifacts --change-id "$GITHUB_SHA" > decision.json
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          set -e
+
+      - name: Upload decision artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotto-ai-decision
+          path: decision.json
+
+      - name: Enforce decision
+        run: |
+          code='${{ steps.governor.outputs.exit_code }}'
+          if [ -z "$code" ]; then
+            echo "Missing governor exit code"
+            exit 2
+          fi
+          exit "$code"
