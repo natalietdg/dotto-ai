@@ -192,12 +192,21 @@ function App() {
 
       const lines = text
         .split(/\n/)
-        .map((l) => l.replace(/^[-*•]\s*/, "").trim())
+        // Strip bullet points, numbered lists, and leading whitespace
+        .map((l) => l.replace(/^[-*•\d.)\s]+/, "").trim())
         // Strip markdown bold **text** and convert to plain text
         .map((l) => l.replace(/\*\*([^*]+)\*\*/g, "$1"))
         // Strip markdown code `text`
         .map((l) => l.replace(/`([^`]+)`/g, "$1"))
-        .filter((l) => l.length > 10 && l.length < 200);
+        // Filter lines: min 5 chars (reduced from 10), max 200 chars, skip headers
+        .filter(
+          (l) =>
+            l.length > 5 &&
+            l.length < 200 &&
+            !l.toLowerCase().startsWith("two key") &&
+            !l.toLowerCase().startsWith("the following") &&
+            !l.toLowerCase().startsWith("key policies")
+        );
 
       return lines.slice(0, 3).map((line) => {
         // Sanitize any raw errors

@@ -15,6 +15,7 @@ import {
   verifyReceipt,
   formatReceiptForDisplay,
   upgradeLegacyReceipt,
+  anchorReceiptToHedera,
   AuthorizationReceipt,
 } from "./crypto/receipt.js";
 
@@ -32,12 +33,12 @@ type StoredDecision = {
   };
 };
 
-function generateAuthorizationReceipt(
+async function generateAuthorizationReceipt(
   decision: GovernorDecision,
   changeId: string,
   artifacts: unknown
-): AuthorizationReceipt {
-  return createReceipt({
+): Promise<AuthorizationReceipt> {
+  const receipt = createReceipt({
     change_id: changeId,
     ruling: decision.decision,
     risk_level: decision.risk_level,
@@ -45,6 +46,13 @@ function generateAuthorizationReceipt(
     artifacts,
     precedent_match: decision.precedent_match,
   });
+
+  // Anchor to Hedera if configured (for approved decisions)
+  if (decision.decision === "approve") {
+    return await anchorReceiptToHedera(receipt);
+  }
+
+  return receipt;
 }
 
 async function writeAuthorizationReceipt(
@@ -216,7 +224,17 @@ async function startServer(): Promise<void> {
       }
 
       if (req.method === "GET" && pathname.startsWith("/artifacts/")) {
-        const rel = pathname.replace("/artifacts/", "");
+        // Decode URI to handle encoded traversal attempts (%2e%2e%2f = ../)
+        let rel: string;
+        try {
+          rel = decodeURIComponent(pathname.replace("/artifacts/", ""));
+        } catch {
+          res.writeHead(400, { "content-type": "application/json" });
+          res.end(JSON.stringify({ error: "invalid_request" }));
+          return;
+        }
+
+        // Check for path traversal after decoding
         if (!rel || rel.includes("..") || rel.includes("\\") || rel.startsWith("/")) {
           res.writeHead(400, { "content-type": "application/json" });
           res.end(JSON.stringify({ error: "invalid_request" }));
@@ -225,7 +243,9 @@ async function startServer(): Promise<void> {
 
         const artifactsRoot = path.resolve("artifacts");
         const filePath = path.resolve(artifactsRoot, rel);
-        if (!filePath.startsWith(artifactsRoot)) {
+
+        // Double-check resolved path is still within allowed directory
+        if (!filePath.startsWith(artifactsRoot + path.sep) && filePath !== artifactsRoot) {
           res.writeHead(400, { "content-type": "application/json" });
           res.end(JSON.stringify({ error: "invalid_request" }));
           return;
@@ -244,7 +264,15 @@ async function startServer(): Promise<void> {
 
       // Serve demo scenario files from examples/demo-scenarios/
       if (req.method === "GET" && pathname.startsWith("/examples/demo-scenarios/")) {
-        const rel = pathname.replace("/examples/demo-scenarios/", "");
+        let rel: string;
+        try {
+          rel = decodeURIComponent(pathname.replace("/examples/demo-scenarios/", ""));
+        } catch {
+          res.writeHead(400, { "content-type": "application/json" });
+          res.end(JSON.stringify({ error: "invalid_request" }));
+          return;
+        }
+
         if (!rel || rel.includes("..") || rel.includes("\\") || rel.startsWith("/")) {
           res.writeHead(400, { "content-type": "application/json" });
           res.end(JSON.stringify({ error: "invalid_request" }));
@@ -253,7 +281,7 @@ async function startServer(): Promise<void> {
 
         const examplesRoot = path.resolve("examples/demo-scenarios");
         const filePath = path.resolve(examplesRoot, rel);
-        if (!filePath.startsWith(examplesRoot)) {
+        if (!filePath.startsWith(examplesRoot + path.sep) && filePath !== examplesRoot) {
           res.writeHead(400, { "content-type": "application/json" });
           res.end(JSON.stringify({ error: "invalid_request" }));
           return;
@@ -272,7 +300,15 @@ async function startServer(): Promise<void> {
 
       // Serve memory files (decisions.json for learning loop)
       if (req.method === "GET" && pathname.startsWith("/memory/")) {
-        const rel = pathname.replace("/memory/", "");
+        let rel: string;
+        try {
+          rel = decodeURIComponent(pathname.replace("/memory/", ""));
+        } catch {
+          res.writeHead(400, { "content-type": "application/json" });
+          res.end(JSON.stringify({ error: "invalid_request" }));
+          return;
+        }
+
         if (!rel || rel.includes("..") || rel.includes("\\") || rel.startsWith("/")) {
           res.writeHead(400, { "content-type": "application/json" });
           res.end(JSON.stringify({ error: "invalid_request" }));
@@ -281,7 +317,7 @@ async function startServer(): Promise<void> {
 
         const memoryRoot = path.resolve("src/memory");
         const filePath = path.resolve(memoryRoot, rel);
-        if (!filePath.startsWith(memoryRoot)) {
+        if (!filePath.startsWith(memoryRoot + path.sep) && filePath !== memoryRoot) {
           res.writeHead(400, { "content-type": "application/json" });
           res.end(JSON.stringify({ error: "invalid_request" }));
           return;
@@ -381,8 +417,8 @@ async function startServer(): Promise<void> {
           { change_id: changeId }
         );
 
-        // Generate and write authorization receipt
-        const receipt = generateAuthorizationReceipt(decision, changeId, artifacts);
+        // Generate and write authorization receipt (with Hedera anchoring if configured)
+        const receipt = await generateAuthorizationReceipt(decision, changeId, artifacts);
         await writeAuthorizationReceipt(artifactsDir, receipt);
 
         // Post GitHub status if token is available and changeId looks like a SHA
@@ -505,10 +541,10 @@ async function startServer(): Promise<void> {
             ? body.human.override_decision
             : body.governor.decision;
 
-        // Load artifacts to generate receipt
+        // Load artifacts to generate receipt (with Hedera anchoring if configured)
         try {
           const artifacts = await loadArtifacts(artifactsDir);
-          const receipt = generateAuthorizationReceipt(
+          const receipt = await generateAuthorizationReceipt(
             {
               decision: finalRuling,
               risk_level: body.governor.risk_level,

@@ -14,6 +14,15 @@ import crypto from "node:crypto";
 
 export type ReceiptVersion = "1.0" | "1.1";
 
+export type HederaProof = {
+  backend: "hedera";
+  topic_id: string;
+  sequence_number: string;
+  transaction_id: string;
+  timestamp: string;
+  hashscan_link: string;
+};
+
 export type AuthorizationReceipt = {
   // Metadata
   version: ReceiptVersion;
@@ -38,6 +47,9 @@ export type AuthorizationReceipt = {
   // Integrity
   artifacts_hash: string;
   signature: string;
+
+  // Hedera proof (optional - only if anchored)
+  hedera_proof?: HederaProof;
 };
 
 export type ReceiptPayload = Omit<AuthorizationReceipt, "signature">;
@@ -59,11 +71,32 @@ const DEFAULT_ISSUER = "dotto-ai/governor";
 const DEFAULT_EXPIRY_HOURS = 24;
 
 /**
- * Get the signing key from environment or use demo key.
- * In production, this should be a secure secret.
+ * Get the signing key from environment.
+ * In production, this must be a secure secret.
  */
 function getSigningKey(): string {
-  return process.env.DOTTO_SIGNING_KEY || "dotto-demo-key";
+  const key = process.env.DOTTO_SIGNING_KEY;
+
+  if (!key) {
+    // In production, require a proper signing key
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "CRITICAL: DOTTO_SIGNING_KEY must be set in production. " +
+          "Generate with: openssl rand -base64 32"
+      );
+    }
+
+    // Only allow demo key in development
+    console.warn("[SECURITY WARNING] Using demo signing key. NOT FOR PRODUCTION.");
+    return "dotto-demo-key";
+  }
+
+  // Validate key strength (at least 32 characters)
+  if (key.length < 32) {
+    throw new Error("DOTTO_SIGNING_KEY must be at least 32 characters");
+  }
+
+  return key;
 }
 
 /**
@@ -293,4 +326,80 @@ export function upgradeLegacyReceipt(legacy: {
     artifacts_hash: legacy.artifacts_hash,
     signature: legacy.signature,
   };
+}
+
+/**
+ * Anchor a receipt to Hedera Consensus Service.
+ * Returns the receipt with hedera_proof populated.
+ */
+export async function anchorReceiptToHedera(
+  receipt: AuthorizationReceipt
+): Promise<AuthorizationReceipt> {
+  // Check if Hedera credentials are configured
+  const accountId = process.env.HEDERA_ACCOUNT_ID;
+  const privateKey = process.env.HEDERA_PRIVATE_KEY;
+  const topicId = process.env.HEDERA_TOPIC_ID;
+
+  if (!accountId || !privateKey || !topicId) {
+    console.warn(
+      "Hedera not configured - receipt will not be anchored. Set HEDERA_ACCOUNT_ID, HEDERA_PRIVATE_KEY, and HEDERA_TOPIC_ID in .env"
+    );
+    return receipt;
+  }
+
+  try {
+    // Dynamic import to avoid issues if @hashgraph/sdk is not installed
+    const { Client, TopicMessageSubmitTransaction, AccountId, PrivateKey } =
+      await import("@hashgraph/sdk");
+
+    const network = process.env.HEDERA_NETWORK || "testnet";
+    const client = network === "testnet" ? Client.forTestnet() : Client.forMainnet();
+
+    client.setOperator(AccountId.fromString(accountId), PrivateKey.fromString(privateKey));
+
+    // Create message with receipt data
+    const message = JSON.stringify({
+      type: "authorization-receipt",
+      version: receipt.version,
+      change_id: receipt.change_id,
+      ruling: receipt.ruling,
+      risk_level: receipt.risk_level,
+      artifacts_hash: receipt.artifacts_hash,
+      signature: receipt.signature,
+      issued_at: receipt.issued_at,
+    });
+
+    const transaction = new TopicMessageSubmitTransaction({
+      topicId: topicId,
+      message: message,
+    });
+
+    const response = await transaction.execute(client);
+    const txReceipt = await response.getReceipt(client);
+
+    const transactionId = response.transactionId.toString();
+    const sequenceNumber = txReceipt.topicSequenceNumber?.toString() || "unknown";
+
+    await client.close();
+
+    // Add Hedera proof to receipt
+    const anchoredReceipt: AuthorizationReceipt = {
+      ...receipt,
+      hedera_proof: {
+        backend: "hedera",
+        topic_id: topicId,
+        sequence_number: sequenceNumber,
+        transaction_id: transactionId,
+        timestamp: new Date().toISOString(),
+        hashscan_link: `https://hashscan.io/${network}/topic/${topicId}/message/${sequenceNumber}`,
+      },
+    };
+
+    console.log(`✅ Receipt anchored to Hedera: ${anchoredReceipt.hedera_proof!.hashscan_link}`);
+
+    return anchoredReceipt;
+  } catch (error) {
+    console.error("Failed to anchor receipt to Hedera:", error);
+    return receipt;
+  }
 }
