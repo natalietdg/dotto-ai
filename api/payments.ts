@@ -1,13 +1,17 @@
 // Payments API - v2.0 (Multi-Currency Support)
-import { PaymentService, ProcessPaymentRequest, ProcessPaymentResponse } from '../services/PaymentService';
-import { Payment, PaymentAmount, PaymentMetadata } from '../schemas/PaymentSchema';
-import { Address } from '../schemas/OrderSchema';
+import {
+  PaymentService,
+  ProcessPaymentRequest,
+  ProcessPaymentResponse,
+} from "../services/PaymentService";
+import { Payment, PaymentAmount, PaymentMetadata } from "../schemas/PaymentSchema";
+import { Address } from "../schemas/OrderSchema";
 
 export interface Request {
   params: Record<string, string>;
   body: any;
-  headers: Record<string, string>;  // NEW: for idempotency key
-  customer?: { id: string };  // BREAKING: renamed from user to customer
+  headers: Record<string, string>; // NEW: for idempotency key
+  customer?: { id: string }; // BREAKING: renamed from user to customer
 }
 
 export interface Response {
@@ -22,25 +26,29 @@ export async function createPayment(req: Request, res: Response): Promise<void> 
   try {
     const { amount, paymentMethodId, metadata } = req.body;
     const customerId = req.customer?.id;
-    const idempotencyKey = req.headers['idempotency-key'];
+    const idempotencyKey = req.headers["idempotency-key"];
 
     if (!customerId) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Customer authentication required' } });
+      res
+        .status(401)
+        .json({ error: { code: "UNAUTHORIZED", message: "Customer authentication required" } });
       return;
     }
 
     if (!idempotencyKey) {
-      res.status(400).json({ error: { code: 'MISSING_IDEMPOTENCY_KEY', message: 'Idempotency-Key header is required' } });
+      res.status(400).json({
+        error: { code: "MISSING_IDEMPOTENCY_KEY", message: "Idempotency-Key header is required" },
+      });
       return;
     }
 
     // Validate amount structure (BREAKING: now requires PaymentAmount object)
-    if (!amount || typeof amount.value !== 'number' || !amount.currency) {
+    if (!amount || typeof amount.value !== "number" || !amount.currency) {
       res.status(400).json({
         error: {
-          code: 'INVALID_AMOUNT',
-          message: 'Amount must include value (number) and currency (string)'
-        }
+          code: "INVALID_AMOUNT",
+          message: "Amount must include value (number) and currency (string)",
+        },
       });
       return;
     }
@@ -49,9 +57,9 @@ export async function createPayment(req: Request, res: Response): Promise<void> 
     if (!metadata || !metadata.orderId || !metadata.merchantId) {
       res.status(400).json({
         error: {
-          code: 'INVALID_METADATA',
-          message: 'Metadata must include orderId and merchantId'
-        }
+          code: "INVALID_METADATA",
+          message: "Metadata must include orderId and merchantId",
+        },
       });
       return;
     }
@@ -70,8 +78,8 @@ export async function createPayment(req: Request, res: Response): Promise<void> 
       res.status(400).json({
         error: {
           code: result.errorCode,
-          message: result.errorDetails
-        }
+          message: result.errorDetails,
+        },
       });
       return;
     }
@@ -81,10 +89,10 @@ export async function createPayment(req: Request, res: Response): Promise<void> 
       _links: {
         self: `/payments/${result.payment.id}`,
         refund: `/payments/${result.payment.id}/refund`,
-      }
+      },
     });
   } catch (error) {
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } });
   }
 }
 
@@ -94,7 +102,7 @@ export async function getPayment(req: Request, res: Response): Promise<void> {
     const payment = await paymentService.getPayment(paymentId);
 
     if (!payment) {
-      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Payment not found' } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Payment not found" } });
       return;
     }
 
@@ -103,10 +111,10 @@ export async function getPayment(req: Request, res: Response): Promise<void> {
       _links: {
         self: `/payments/${payment.id}`,
         refund: `/payments/${payment.id}/refund`,
-      }
+      },
     });
   } catch (error) {
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } });
   }
 }
 
@@ -117,7 +125,9 @@ export async function getCustomerPayments(req: Request, res: Response): Promise<
     const currency = req.params.currency; // Optional currency filter
 
     if (!customerId) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Customer authentication required' } });
+      res
+        .status(401)
+        .json({ error: { code: "UNAUTHORIZED", message: "Customer authentication required" } });
       return;
     }
 
@@ -127,10 +137,10 @@ export async function getCustomerPayments(req: Request, res: Response): Promise<
       count: payments.length,
       _links: {
         self: `/customers/${customerId}/payments`,
-      }
+      },
     });
   } catch (error) {
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } });
   }
 }
 
@@ -140,12 +150,12 @@ export async function refundPayment(req: Request, res: Response): Promise<void> 
     const { paymentId } = req.params;
     const { reason } = req.body;
 
-    if (!reason || typeof reason !== 'string') {
+    if (!reason || typeof reason !== "string") {
       res.status(400).json({
         error: {
-          code: 'MISSING_REASON',
-          message: 'Refund reason is required'
-        }
+          code: "MISSING_REASON",
+          message: "Refund reason is required",
+        },
       });
       return;
     }
@@ -156,8 +166,8 @@ export async function refundPayment(req: Request, res: Response): Promise<void> 
       res.status(400).json({
         error: {
           code: result.errorCode,
-          message: result.errorDetails
-        }
+          message: result.errorDetails,
+        },
       });
       return;
     }
@@ -167,7 +177,7 @@ export async function refundPayment(req: Request, res: Response): Promise<void> 
       refundedAt: new Date().toISOString(),
     });
   } catch (error) {
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } });
   }
 }
 
@@ -176,12 +186,12 @@ export async function convertCurrency(req: Request, res: Response): Promise<void
   try {
     const { amount, fromCurrency, toCurrency } = req.body;
 
-    if (typeof amount !== 'number' || !fromCurrency || !toCurrency) {
+    if (typeof amount !== "number" || !fromCurrency || !toCurrency) {
       res.status(400).json({
         error: {
-          code: 'INVALID_REQUEST',
-          message: 'Amount, fromCurrency, and toCurrency are required'
-        }
+          code: "INVALID_REQUEST",
+          message: "Amount, fromCurrency, and toCurrency are required",
+        },
       });
       return;
     }
@@ -189,7 +199,7 @@ export async function convertCurrency(req: Request, res: Response): Promise<void
     const converted = await paymentService.convertCurrency(amount, fromCurrency, toCurrency);
     res.status(200).json({ converted });
   } catch (error) {
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } });
   }
 }
 
@@ -200,16 +210,18 @@ export async function registerPaymentMethod(req: Request, res: Response): Promis
     const { type, lastFour, expiryMonth, expiryYear, billingAddress } = req.body;
 
     if (!customerId) {
-      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Customer authentication required' } });
+      res
+        .status(401)
+        .json({ error: { code: "UNAUTHORIZED", message: "Customer authentication required" } });
       return;
     }
 
     if (!type || !lastFour || !expiryMonth || !expiryYear || !billingAddress) {
       res.status(400).json({
         error: {
-          code: 'INVALID_REQUEST',
-          message: 'type, lastFour, expiryMonth, expiryYear, and billingAddress are required'
-        }
+          code: "INVALID_REQUEST",
+          message: "type, lastFour, expiryMonth, expiryYear, and billingAddress are required",
+        },
       });
       return;
     }
@@ -225,6 +237,6 @@ export async function registerPaymentMethod(req: Request, res: Response): Promis
 
     res.status(201).json({ paymentMethod: method });
   } catch (error) {
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } });
   }
 }

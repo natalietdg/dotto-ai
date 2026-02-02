@@ -1,20 +1,20 @@
 // Order Service - v1.1 (Updated for Payment v2.0 compatibility)
-import { Order, OrderItem, Address } from '../schemas/OrderSchema';
-import { PaymentService, ProcessPaymentRequest } from './PaymentService';
-import { PaymentAmount, PaymentMetadata } from '../schemas/PaymentSchema';
+import { Order, OrderItem, Address } from "../schemas/OrderSchema";
+import { PaymentService, ProcessPaymentRequest } from "./PaymentService";
+import { PaymentAmount, PaymentMetadata } from "../schemas/PaymentSchema";
 
 export interface CreateOrderRequest {
-  customerId: string;  // BREAKING: renamed from userId for consistency with Payment v2.0
-  items: Omit<OrderItem, 'subtotal'>[];
+  customerId: string; // BREAKING: renamed from userId for consistency with Payment v2.0
+  items: Omit<OrderItem, "subtotal">[];
   shippingAddress: Address;
   billingAddress?: Address;
-  merchantId: string;  // NEW: required for payment processing
+  merchantId: string; // NEW: required for payment processing
 }
 
 export interface OrderResponse {
   order: Order;
   success: boolean;
-  errorCode?: string;  // BREAKING: renamed from errorMessage for consistency
+  errorCode?: string; // BREAKING: renamed from errorMessage for consistency
   errorDetails?: string;
 }
 
@@ -30,7 +30,7 @@ export class OrderService {
     const { customerId, items, shippingAddress, billingAddress, merchantId } = request;
 
     // Calculate item subtotals and total
-    const orderItems: OrderItem[] = items.map(item => ({
+    const orderItems: OrderItem[] = items.map((item) => ({
       ...item,
       subtotal: item.quantity * item.unitPrice,
     }));
@@ -42,7 +42,7 @@ export class OrderService {
       userId: customerId, // Map customerId to internal userId field
       items: orderItems,
       total,
-      status: 'draft',
+      status: "draft",
       shippingAddress,
       billingAddress,
       createdAt: new Date(),
@@ -58,7 +58,7 @@ export class OrderService {
   async submitOrder(
     orderId: string,
     paymentMethodId: string,
-    currency: string = 'USD',
+    currency: string = "USD",
     merchantId: string
   ): Promise<OrderResponse> {
     const order = this.orders.get(orderId);
@@ -66,17 +66,17 @@ export class OrderService {
       return {
         order: null as any,
         success: false,
-        errorCode: 'ORDER_NOT_FOUND',
-        errorDetails: 'Order not found'
+        errorCode: "ORDER_NOT_FOUND",
+        errorDetails: "Order not found",
       };
     }
 
-    if (order.status !== 'draft') {
+    if (order.status !== "draft") {
       return {
         order,
         success: false,
-        errorCode: 'INVALID_ORDER_STATUS',
-        errorDetails: 'Order already submitted'
+        errorCode: "INVALID_ORDER_STATUS",
+        errorDetails: "Order already submitted",
       };
     }
 
@@ -109,11 +109,11 @@ export class OrderService {
         order,
         success: false,
         errorCode: paymentResult.errorCode,
-        errorDetails: paymentResult.errorDetails
+        errorDetails: paymentResult.errorDetails,
       };
     }
 
-    order.status = 'submitted';
+    order.status = "submitted";
     order.updatedAt = new Date();
 
     return { order, success: true };
@@ -125,18 +125,17 @@ export class OrderService {
 
   // BREAKING: Renamed from getUserOrders for consistency
   async getCustomerOrders(customerId: string): Promise<Order[]> {
-    return Array.from(this.orders.values())
-      .filter(o => o.userId === customerId);
+    return Array.from(this.orders.values()).filter((o) => o.userId === customerId);
   }
 
-  async updateOrderStatus(orderId: string, status: Order['status']): Promise<OrderResponse> {
+  async updateOrderStatus(orderId: string, status: Order["status"]): Promise<OrderResponse> {
     const order = this.orders.get(orderId);
     if (!order) {
       return {
         order: null as any,
         success: false,
-        errorCode: 'ORDER_NOT_FOUND',
-        errorDetails: 'Order not found'
+        errorCode: "ORDER_NOT_FOUND",
+        errorDetails: "Order not found",
       };
     }
 
@@ -152,21 +151,21 @@ export class OrderService {
       return {
         order: null as any,
         success: false,
-        errorCode: 'ORDER_NOT_FOUND',
-        errorDetails: 'Order not found'
+        errorCode: "ORDER_NOT_FOUND",
+        errorDetails: "Order not found",
       };
     }
 
-    if (order.status === 'shipped' || order.status === 'delivered') {
+    if (order.status === "shipped" || order.status === "delivered") {
       return {
         order,
         success: false,
-        errorCode: 'CANNOT_CANCEL',
-        errorDetails: 'Cannot cancel shipped orders'
+        errorCode: "CANNOT_CANCEL",
+        errorDetails: "Cannot cancel shipped orders",
       };
     }
 
-    order.status = 'cancelled';
+    order.status = "cancelled";
     order.updatedAt = new Date();
 
     return { order, success: true };

@@ -1,7 +1,7 @@
 // Orders API - v1.0
-import { OrderService, CreateOrderRequest } from '../services/OrderService';
-import { PaymentService } from '../services/PaymentService';
-import { Order } from '../schemas/OrderSchema';
+import { OrderService, CreateOrderRequest } from "../services/OrderService";
+import { PaymentService } from "../services/PaymentService";
+import { Order } from "../schemas/OrderSchema";
 
 export interface Request {
   params: Record<string, string>;
@@ -22,7 +22,7 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
     const userId = req.user?.id;
 
     if (!userId) {
-      res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: "Unauthorized" });
       return;
     }
 
@@ -44,7 +44,7 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
 
     res.status(201).json({ order: result.order });
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -54,13 +54,13 @@ export async function getOrder(req: Request, res: Response): Promise<void> {
     const order = await orderService.getOrder(orderId);
 
     if (!order) {
-      res.status(404).json({ error: 'Order not found' });
+      res.status(404).json({ error: "Order not found" });
       return;
     }
 
     res.status(200).json({ order });
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -69,14 +69,14 @@ export async function getUserOrders(req: Request, res: Response): Promise<void> 
     const userId = req.user?.id;
 
     if (!userId) {
-      res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: "Unauthorized" });
       return;
     }
 
     const orders = await orderService.getUserOrders(userId);
     res.status(200).json({ orders });
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -94,7 +94,7 @@ export async function submitOrder(req: Request, res: Response): Promise<void> {
 
     res.status(200).json({ order: result.order });
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -110,6 +110,6 @@ export async function cancelOrder(req: Request, res: Response): Promise<void> {
 
     res.status(200).json({ order: result.order });
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: "Internal server error" });
   }
 }

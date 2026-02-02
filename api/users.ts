@@ -1,6 +1,6 @@
 // Users API - v1.0
-import { UserService, CreateUserRequest, UpdateUserRequest } from '../services/UserService';
-import { User } from '../schemas/UserSchema';
+import { UserService, CreateUserRequest, UpdateUserRequest } from "../services/UserService";
+import { User } from "../schemas/UserSchema";
 
 export interface Request {
   params: Record<string, string>;
@@ -24,11 +24,11 @@ export async function createUser(req: Request, res: Response): Promise<void> {
 
     res.status(201).json({ user });
   } catch (error) {
-    if ((error as Error).message === 'Email already registered') {
-      res.status(409).json({ error: 'Email already registered' });
+    if ((error as Error).message === "Email already registered") {
+      res.status(409).json({ error: "Email already registered" });
       return;
     }
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -38,13 +38,13 @@ export async function getUser(req: Request, res: Response): Promise<void> {
     const user = await userService.getUser(userId);
 
     if (!user) {
-      res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: "User not found" });
       return;
     }
 
     res.status(200).json({ user });
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -56,13 +56,13 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
     const user = await userService.updateUser(userId, updates);
 
     if (!user) {
-      res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: "User not found" });
       return;
     }
 
     res.status(200).json({ user });
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -72,13 +72,13 @@ export async function deactivateUser(req: Request, res: Response): Promise<void>
     const success = await userService.deactivateUser(userId);
 
     if (!success) {
-      res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: "User not found" });
       return;
     }
 
-    res.status(200).json({ message: 'User deactivated' });
+    res.status(200).json({ message: "User deactivated" });
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -87,19 +87,19 @@ export async function getUserPreferences(req: Request, res: Response): Promise<v
     const userId = req.user?.id;
 
     if (!userId) {
-      res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: "Unauthorized" });
       return;
     }
 
     const preferences = await userService.getUserPreferences(userId);
 
     if (!preferences) {
-      res.status(404).json({ error: 'Preferences not found' });
+      res.status(404).json({ error: "Preferences not found" });
       return;
     }
 
     res.status(200).json({ preferences });
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: "Internal server error" });
   }
 }

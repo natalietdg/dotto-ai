@@ -1,5 +1,5 @@
 /* hex.tech inspired - Custom Fonts */
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap");
 
 * {
   margin: 0;
@@ -7,14 +7,21 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   overflow: hidden;
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 14px;
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  font-size: 16px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -27,12 +34,20 @@ body {
   height: 100%;
 }
 
-code, pre {
-  font-family: 'IBM Plex Mono', 'SF Mono', 'Fira Code', monospace;
+code,
+pre {
+  font-family: "IBM Plex Mono", "SF Mono", "Fira Code", monospace;
 }
 
 button {
   font-family: inherit;
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.1s ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 a {
@@ -69,6 +84,88 @@ a {
 
 /* Focus visible for accessibility */
 :focus-visible {
-  outline: 2px solid var(--accent-rose);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* Enhanced focus for specific elements */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Tab focus ring */
+.tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: var(--bg-tertiary);
+}
+
+/* ===== Responsive Base Styles ===== */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  body {
+    font-size: 13px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  body {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Improve touch targets */
+  button,
+  a,
+  input,
+  select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Allow smaller buttons when explicitly sized */
+  button.btn-theme,
+  button.btn-refresh,
+  button.mobile-menu-btn,
+  button.sidebar__close,
+  button.mobile-menu__close {
+    min-height: auto;
+    min-width: auto;
+  }
+
+  /* Smoother scrolling on iOS */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Better scrollbars on mobile - thinner */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+  body {
+    font-size: 13px;
+  }
+
+  code,
+  pre {
+    font-size: 13px;
+  }
 }

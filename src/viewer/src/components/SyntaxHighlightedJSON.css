@@ -1,0 +1,143 @@
+/* ===== Syntax Highlighted JSON ===== */
+
+.syntax-json {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-tertiary);
+}
+
+.syntax-json__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.syntax-json__label {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.syntax-json__copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.syntax-json__copy:hover {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+  border-color: var(--border-hover);
+}
+
+.syntax-json__copy:active {
+  transform: scale(0.97);
+}
+
+.syntax-json__content {
+  /* overflow handled by parent container */
+}
+
+.syntax-json__pre {
+  margin: 0;
+  padding: 12px 0;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.syntax-json__code {
+  display: block;
+}
+
+.syntax-json__line {
+  display: flex;
+  min-height: 1.6em;
+}
+
+.syntax-json__line:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="dark"] .syntax-json__line:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.syntax-json__line-number {
+  flex-shrink: 0;
+  width: 40px;
+  padding-right: 12px;
+  text-align: right;
+  color: var(--text-muted);
+  user-select: none;
+  opacity: 0.5;
+}
+
+.syntax-json__line-content {
+  flex: 1;
+  padding-right: 12px;
+  white-space: pre;
+}
+
+/* Token colors */
+.syntax-json__token--key {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.syntax-json__token--string {
+  color: #22c55e; /* Green */
+}
+
+.syntax-json__token--number {
+  color: #f59e0b; /* Amber */
+}
+
+.syntax-json__token--boolean {
+  color: #3b82f6; /* Blue */
+}
+
+.syntax-json__token--null {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.syntax-json__token--bracket {
+  color: var(--text-secondary);
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .syntax-json__token--key {
+  color: #fafafa;
+}
+
+[data-theme="dark"] .syntax-json__token--string {
+  color: #4ade80;
+}
+
+[data-theme="dark"] .syntax-json__token--number {
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .syntax-json__token--boolean {
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .syntax-json__token--bracket {
+  color: #a3a3a3;
+}

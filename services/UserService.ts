@@ -1,10 +1,10 @@
 // User Service - v1.0
-import { User, UserProfile, UserPreferences } from '../schemas/UserSchema';
+import { User, UserProfile, UserPreferences } from "../schemas/UserSchema";
 
 export interface CreateUserRequest {
   email: string;
   name: string;
-  role?: 'user' | 'admin' | 'moderator';
+  role?: "user" | "admin" | "moderator";
 }
 
 export interface UpdateUserRequest {
@@ -18,13 +18,12 @@ export class UserService {
   private preferences: Map<string, UserPreferences> = new Map();
 
   async createUser(request: CreateUserRequest): Promise<User> {
-    const { email, name, role = 'user' } = request;
+    const { email, name, role = "user" } = request;
 
     // Check if email already exists
-    const existingUser = Array.from(this.users.values())
-      .find(u => u.email === email);
+    const existingUser = Array.from(this.users.values()).find((u) => u.email === email);
     if (existingUser) {
-      throw new Error('Email already registered');
+      throw new Error("Email already registered");
     }
 
     const user: User = {
@@ -41,9 +40,9 @@ export class UserService {
 
     // Set default preferences
     this.preferences.set(user.id, {
-      theme: 'light',
+      theme: "light",
       notifications: true,
-      language: 'en',
+      language: "en",
     });
 
     return user;
@@ -54,8 +53,7 @@ export class UserService {
   }
 
   async getUserByEmail(email: string): Promise<User | null> {
-    return Array.from(this.users.values())
-      .find(u => u.email === email) || null;
+    return Array.from(this.users.values()).find((u) => u.email === email) || null;
   }
 
   async updateUser(userId: string, updates: UpdateUserRequest): Promise<User | null> {

@@ -9,13 +9,13 @@
  */
 export interface Payment {
   id: string;
-  customerId: string;  // BREAKING: renamed from userId
-  amount: PaymentAmount;  // BREAKING: changed from number to object
-  status: 'initiated' | 'processing' | 'succeeded' | 'failed' | 'cancelled';  // BREAKING: changed enum values
+  customerId: string; // BREAKING: renamed from userId
+  amount: PaymentAmount; // BREAKING: changed from number to object
+  status: "initiated" | "processing" | "succeeded" | "failed" | "cancelled"; // BREAKING: changed enum values
   createdAt: Date;
-  completedAt?: Date;  // renamed from processedAt
-  metadata: PaymentMetadata;  // BREAKING: now required (was optional)
-  idempotencyKey: string;  // NEW required field
+  completedAt?: Date; // renamed from processedAt
+  metadata: PaymentMetadata; // BREAKING: now required (was optional)
+  idempotencyKey: string; // NEW required field
 }
 
 export interface PaymentAmount {
@@ -25,22 +25,22 @@ export interface PaymentAmount {
 }
 
 export interface PaymentMetadata {
-  orderId: string;  // BREAKING: now required
+  orderId: string; // BREAKING: now required
   description?: string;
   receiptUrl?: string;
-  merchantId: string;  // NEW required field
+  merchantId: string; // NEW required field
 }
 
 export interface PaymentMethod {
   id: string;
-  customerId: string;  // BREAKING: renamed from userId
-  type: 'credit_card' | 'debit_card' | 'bank_transfer' | 'digital_wallet';  // BREAKING: changed enum values
+  customerId: string; // BREAKING: renamed from userId
+  type: "credit_card" | "debit_card" | "bank_transfer" | "digital_wallet"; // BREAKING: changed enum values
   isDefault: boolean;
   lastFour?: string;
-  expiryMonth?: number;  // BREAKING: changed from expiryDate string
-  expiryYear?: number;   // BREAKING: changed from expiryDate string
-  billingAddress: Address;  // NEW required field
+  expiryMonth?: number; // BREAKING: changed from expiryDate string
+  expiryYear?: number; // BREAKING: changed from expiryDate string
+  billingAddress: Address; // NEW required field
 }
 
 // New import dependency
-import { Address } from './OrderSchema';
+import { Address } from "./OrderSchema";

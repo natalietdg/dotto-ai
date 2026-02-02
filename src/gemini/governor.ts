@@ -1,15 +1,22 @@
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-import type { DottoArtifacts } from '../engine/dotto.js';
+import type { DottoArtifacts } from "../engine/dotto.js";
 
 export type GovernorDecision = {
-  decision: 'approve' | 'block' | 'escalate';
-  risk_level: 'low' | 'medium' | 'high';
+  decision: "approve" | "block" | "escalate";
+  risk_level: "low" | "medium" | "high";
+  insight?: string; // Key finding quote from Gemini - the headline shown to humans
   reasoning: string[];
   conditions: string[];
   thinking?: string; // Raw chain-of-thought from Gemini
+  auto_authorized?: boolean;
+  precedent_match?: {
+    change_id: string;
+    timestamp: string;
+    similarity: number;
+  };
 };
 
 export type GovernorRunConfig = {
@@ -43,31 +50,207 @@ function formatError(err: unknown): string {
 }
 
 async function readJson(filePath: string): Promise<unknown> {
-  const raw = await readFile(filePath, 'utf8');
+  const raw = await readFile(filePath, "utf8");
   return JSON.parse(raw);
 }
 
+// Drift as vector, not string
+type DriftVector = {
+  entity: string;
+  breaking: boolean;
+  changeType: "added" | "modified" | "removed";
+};
+
+type StoredDecision = {
+  timestamp: string;
+  change_id: string;
+  decision: "approve" | "block" | "escalate";
+  risk_level: "low" | "medium" | "high";
+  reasoning: string[];
+  drift_vectors?: DriftVector[]; // Structured for precedent matching
+  human_feedback: {
+    outcome: "accepted" | "overridden";
+    override_decision?: "approve" | "block";
+  };
+};
+
+type PrecedentMatch = {
+  change_id: string;
+  timestamp: string;
+  similarity: number;
+  decision: "approve" | "block";
+};
+
+// Explicit weights for similarity scoring
+const SIMILARITY_WEIGHTS = {
+  entity: 0.5,
+  breaking: 0.25,
+  changeType: 0.25,
+};
+
+function normalizeEntity(nodeId: string): string {
+  // Extract base entity name
+  let pattern = nodeId.split(":").pop() || nodeId;
+  // Remove common suffixes
+  pattern = pattern.replace(/Request|Response|DTO|Schema/gi, "");
+  // Collapse related suffixes to base entity
+  pattern = pattern.replace(/(Metadata|Amount|Method|Config|Settings)$/i, "");
+  return pattern.toLowerCase();
+}
+
+function extractDriftVectors(drift: unknown): DriftVector[] {
+  if (!drift || typeof drift !== "object") return [];
+
+  const driftObj = drift as Record<string, unknown>;
+  const diffs = Array.isArray(driftObj.diffs) ? driftObj.diffs : [];
+
+  const vectors: DriftVector[] = [];
+  for (const diff of diffs) {
+    if (diff && typeof diff === "object") {
+      const d = diff as Record<string, unknown>;
+      const nodeId = typeof d.nodeId === "string" ? d.nodeId : "";
+      const breaking = d.breaking === true;
+      const rawChangeType = typeof d.changeType === "string" ? d.changeType : "modified";
+
+      // Normalize changeType to our enum
+      let changeType: "added" | "modified" | "removed" = "modified";
+      if (rawChangeType === "added") changeType = "added";
+      else if (rawChangeType === "removed" || rawChangeType === "deleted") changeType = "removed";
+
+      vectors.push({
+        entity: normalizeEntity(nodeId),
+        breaking,
+        changeType,
+      });
+    }
+  }
+  return vectors;
+}
+
+// Compare two drift vectors
+function vectorSimilarity(a: DriftVector, b: DriftVector): number {
+  let score = 0;
+
+  if (a.entity === b.entity) {
+    score += SIMILARITY_WEIGHTS.entity;
+  }
+
+  if (a.breaking === b.breaking) {
+    score += SIMILARITY_WEIGHTS.breaking;
+  }
+
+  if (a.changeType === b.changeType) {
+    score += SIMILARITY_WEIGHTS.changeType;
+  }
+
+  return score;
+}
+
+// Compare two sets of drift vectors
+function setSimilarity(current: DriftVector[], prior: DriftVector[]): number {
+  if (current.length === 0) return 0;
+
+  let total = 0;
+  for (const c of current) {
+    let best = 0;
+    for (const p of prior) {
+      best = Math.max(best, vectorSimilarity(c, p));
+    }
+    total += best;
+  }
+
+  return total / current.length;
+}
+
+// Legacy support: extract string signatures for backwards compatibility
+function extractChangeSignature(drift: unknown): string[] {
+  const vectors = extractDriftVectors(drift);
+  return vectors.map((v) => `${v.entity}:${v.breaking ? "breaking" : "safe"}:${v.changeType}`);
+}
+
+function findPrecedentMatch(
+  currentDrift: unknown,
+  memory: unknown,
+  threshold: number = 0.6
+): PrecedentMatch | null {
+  const currentVectors = extractDriftVectors(currentDrift);
+  if (currentVectors.length === 0) return null;
+
+  // Get approved decisions from memory
+  if (!memory || typeof memory !== "object") return null;
+  const memoryObj = memory as Record<string, unknown>;
+  const decisions = Array.isArray(memoryObj.decisions)
+    ? (memoryObj.decisions as StoredDecision[])
+    : [];
+
+  // Only consider decisions that resulted in approval (either direct or override)
+  const approvedDecisions = decisions.filter((d) => {
+    if (d.human_feedback.outcome === "accepted" && d.decision === "approve") return true;
+    if (
+      d.human_feedback.outcome === "overridden" &&
+      d.human_feedback.override_decision === "approve"
+    )
+      return true;
+    return false;
+  });
+
+  if (approvedDecisions.length === 0) return null;
+
+  let bestMatch: PrecedentMatch | null = null;
+
+  for (const prior of approvedDecisions) {
+    let similarity = 0;
+
+    // If prior decision has stored drift vectors, use weighted similarity
+    if (prior.drift_vectors && prior.drift_vectors.length > 0) {
+      similarity = setSimilarity(currentVectors, prior.drift_vectors);
+    } else {
+      // No drift vectors stored - skip this decision for auto-authorization
+      // Text-based matching is too unreliable for precedent matching
+      // This decision can still inform Gemini's reasoning, just not auto-authorize
+      continue;
+    }
+
+    if (similarity >= threshold && (!bestMatch || similarity > bestMatch.similarity)) {
+      bestMatch = {
+        change_id: prior.change_id,
+        timestamp: prior.timestamp,
+        similarity,
+        decision: "approve",
+      };
+    }
+  }
+
+  return bestMatch;
+}
+
+// Export for use in server when storing decisions
+export { extractChangeSignature, extractDriftVectors, DriftVector };
+
 function coerceDecision(obj: unknown): GovernorDecision | null {
-  if (!obj || typeof obj !== 'object') return null;
+  if (!obj || typeof obj !== "object") return null;
   const anyObj = obj as Record<string, unknown>;
 
   const decision = anyObj.decision;
   const risk = anyObj.risk_level;
+  const insight = anyObj.insight;
   const reasoning = anyObj.reasoning;
   const conditions = anyObj.conditions;
 
-  const isDecision = decision === 'approve' || decision === 'block' || decision === 'escalate';
-  const isRisk = risk === 'low' || risk === 'medium' || risk === 'high';
-  const isReasoning = Array.isArray(reasoning) && reasoning.every((x) => typeof x === 'string');
-  const isConditions = Array.isArray(conditions) && conditions.every((x) => typeof x === 'string');
+  const isDecision = decision === "approve" || decision === "block" || decision === "escalate";
+  const isRisk = risk === "low" || risk === "medium" || risk === "high";
+  const isInsight = typeof insight === "string" || insight === undefined;
+  const isReasoning = Array.isArray(reasoning) && reasoning.every((x) => typeof x === "string");
+  const isConditions = Array.isArray(conditions) && conditions.every((x) => typeof x === "string");
 
-  if (!isDecision || !isRisk || !isReasoning || !isConditions) return null;
+  if (!isDecision || !isRisk || !isInsight || !isReasoning || !isConditions) return null;
 
   return {
     decision,
     risk_level: risk,
+    insight: typeof insight === "string" ? insight : undefined,
     reasoning,
-    conditions
+    conditions,
   };
 }
 
@@ -143,6 +326,7 @@ FORMAT YOUR RESPONSE AS:
 {
   "decision": "approve | block | escalate",
   "risk_level": "low | medium | high",
+  "insight": "One sentence key finding that explains WHY this decision was made. This is the headline quote shown to humans.",
   "reasoning": ["summary point 1", "summary point 2", ...],
   "conditions": ["condition 1 if any", ...]
 }
@@ -161,22 +345,47 @@ export async function runGovernor(
   const policy = await readJson(config.policyPath);
   const memory = await readJson(config.memoryPath);
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
+  // Check for precedent match before calling Gemini
+  // If a similar change was previously approved, auto-authorize
+  const precedentMatch = findPrecedentMatch(artifacts.drift, memory);
+  if (precedentMatch && precedentMatch.decision === "approve") {
     return {
-      decision: 'escalate',
-      risk_level: 'high',
+      decision: "approve",
+      risk_level: "low",
       reasoning: [
-        'GEMINI_API_KEY is not set, so the governor cannot perform policy and precedent reasoning.',
-        `Artifacts loaded from: ${config.artifactsDir}`,
-        `Policy loaded from: ${path.resolve(config.policyPath)}`,
-        `Memory loaded from: ${path.resolve(config.memoryPath)}`
+        `Auto-authorized via precedent match.`,
+        `Prior ruling: ${precedentMatch.change_id} (${new Date(precedentMatch.timestamp).toLocaleDateString()})`,
+        `Similarity: ${Math.round(precedentMatch.similarity * 100)}%`,
       ],
-      conditions: ['Set GEMINI_API_KEY in the CI environment to enable Gemini reasoning.']
+      conditions: [
+        "This change matches a previously approved pattern.",
+        "Human review was not required.",
+      ],
+      auto_authorized: true,
+      precedent_match: {
+        change_id: precedentMatch.change_id,
+        timestamp: precedentMatch.timestamp,
+        similarity: precedentMatch.similarity,
+      },
     };
   }
 
-  const modelName = config.model ?? process.env.GEMINI_MODEL ?? 'gemini-3-flash-preview';
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return {
+      decision: "escalate",
+      risk_level: "high",
+      reasoning: [
+        "GEMINI_API_KEY is not set, so the governor cannot perform policy and precedent reasoning.",
+        `Artifacts loaded from: ${config.artifactsDir}`,
+        `Policy loaded from: ${path.resolve(config.policyPath)}`,
+        `Memory loaded from: ${path.resolve(config.memoryPath)}`,
+      ],
+      conditions: ["Set GEMINI_API_KEY in the CI environment to enable Gemini reasoning."],
+    };
+  }
+
+  const modelName = config.model ?? process.env.GEMINI_MODEL ?? "gemini-3-flash-preview";
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: modelName });
 
@@ -188,13 +397,14 @@ export async function runGovernor(
   let lastErr: unknown;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const result = await withTimeout(model.generateContent(prompt), timeoutMs, 'Gemini request');
+      const result = await withTimeout(model.generateContent(prompt), timeoutMs, "Gemini request");
       const text = result.response.text();
 
       // Extract reasoning/thinking and decision from the response
       // Support both <reasoning> (new) and <thinking> (legacy) tags
-      const reasoningMatch = text.match(/<reasoning>([\s\S]*?)<\/reasoning>/i)
-        || text.match(/<thinking>([\s\S]*?)<\/thinking>/i);
+      const reasoningMatch =
+        text.match(/<reasoning>([\s\S]*?)<\/reasoning>/i) ||
+        text.match(/<thinking>([\s\S]*?)<\/thinking>/i);
       const decisionMatch = text.match(/<decision>([\s\S]*?)<\/decision>/i);
 
       const thinking = reasoningMatch ? reasoningMatch[1].trim() : null;
@@ -202,27 +412,36 @@ export async function runGovernor(
 
       let parsed: unknown;
       try {
-        const cleaned = decisionText.trim().replace(/^```json\s*|^```\s*|```$/gm, '').trim();
+        const cleaned = decisionText
+          .trim()
+          .replace(/^```json\s*|^```\s*|```$/gm, "")
+          .trim();
         parsed = JSON.parse(cleaned);
       } catch {
         // Fail closed: require a machine-readable output.
         return {
-          decision: 'escalate',
-          risk_level: 'high',
-          reasoning: ['Gemini response was not valid JSON and cannot be consumed by CI/CD safely.'],
-          conditions: ['Ensure the model is configured to output strict JSON only.', `Raw output: ${text}`],
-          thinking: thinking || undefined
+          decision: "escalate",
+          risk_level: "high",
+          reasoning: ["Gemini response was not valid JSON and cannot be consumed by CI/CD safely."],
+          conditions: [
+            "Ensure the model is configured to output strict JSON only.",
+            `Raw output: ${text}`,
+          ],
+          thinking: thinking || undefined,
         };
       }
 
       const decision = coerceDecision(parsed);
       if (!decision) {
         return {
-          decision: 'escalate',
-          risk_level: 'high',
-          reasoning: ['Gemini returned JSON that does not match the required decision schema.'],
-          conditions: ['Fix the governor prompt or model settings to match the required schema exactly.', `Raw JSON: ${text}`],
-          thinking: thinking || undefined
+          decision: "escalate",
+          risk_level: "high",
+          reasoning: ["Gemini returned JSON that does not match the required decision schema."],
+          conditions: [
+            "Fix the governor prompt or model settings to match the required schema exactly.",
+            `Raw JSON: ${text}`,
+          ],
+          thinking: thinking || undefined,
         };
       }
 
@@ -241,16 +460,16 @@ export async function runGovernor(
   }
 
   return {
-    decision: 'escalate',
-    risk_level: 'high',
+    decision: "escalate",
+    risk_level: "high",
     reasoning: [
-      'Gemini request failed and could not be completed within the configured retry/timeout budget.',
+      "Gemini request failed and could not be completed within the configured retry/timeout budget.",
       `model=${modelName}`,
-      `error=${formatError(lastErr)}`
+      `error=${formatError(lastErr)}`,
     ],
     conditions: [
-      'Retry the pipeline when network connectivity is stable.',
-      'If this persists, increase GEMINI_TIMEOUT_MS or GEMINI_MAX_RETRIES in CI, or investigate outbound network/proxy settings.'
-    ]
+      "Retry the pipeline when network connectivity is stable.",
+      "If this persists, increase GEMINI_TIMEOUT_MS or GEMINI_MAX_RETRIES in CI, or investigate outbound network/proxy settings.",
+    ],
   };
 }

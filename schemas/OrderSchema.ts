@@ -4,7 +4,7 @@ export interface Order {
   userId: string;
   items: OrderItem[];
   total: number;
-  status: 'draft' | 'submitted' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: "draft" | "submitted" | "processing" | "shipped" | "delivered" | "cancelled";
   shippingAddress: Address;
   billingAddress?: Address;
   createdAt: Date;

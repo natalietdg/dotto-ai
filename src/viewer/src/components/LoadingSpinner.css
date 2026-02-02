@@ -1,0 +1,178 @@
+/* ===== Loading Spinner ===== */
+
+.loading-spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-spinner__circle {
+  border-radius: 50%;
+  border-style: solid;
+  border-top-color: transparent;
+  animation: spinner-rotate 0.7s linear infinite;
+}
+
+/* Sizes */
+.loading-spinner--sm .loading-spinner__circle {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+}
+
+.loading-spinner--md .loading-spinner__circle {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+}
+
+.loading-spinner--lg .loading-spinner__circle {
+  width: 32px;
+  height: 32px;
+  border-width: 3px;
+}
+
+/* Colors */
+.loading-spinner--default .loading-spinner__circle {
+  border-color: var(--border);
+  border-top-color: var(--accent);
+}
+
+.loading-spinner--white .loading-spinner__circle {
+  border-color: rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+}
+
+.loading-spinner--accent .loading-spinner__circle {
+  border-color: var(--accent-subtle);
+  border-top-color: var(--accent);
+}
+
+@keyframes spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== Button Loading ===== */
+
+.btn-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+}
+
+.btn-loading--active {
+  cursor: wait;
+}
+
+.btn-loading__text {
+  margin-left: 4px;
+}
+
+/* ===== Skeleton ===== */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--bg-secondary) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ===== Skeleton Card ===== */
+
+.skeleton-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.skeleton-card__header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.skeleton-card__body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ===== Skeleton Stats ===== */
+
+.skeleton-stats {
+  display: flex;
+  gap: 12px;
+}
+
+/* ===== Progress Bar ===== */
+
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--bg-tertiary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-bar__fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.progress-bar--indeterminate .progress-bar__fill {
+  width: 30%;
+  animation: progress-indeterminate 1.5s ease-in-out infinite;
+}
+
+@keyframes progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+/* ===== Loading Overlay ===== */
+
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(var(--bg-primary-rgb, 250, 250, 250), 0.8);
+  backdrop-filter: blur(2px);
+  z-index: 10;
+}
+
+[data-theme="dark"] .loading-overlay {
+  background: rgba(10, 10, 10, 0.8);
+}
+
+.loading-overlay__text {
+  font-size: 13px;
+  color: var(--text-secondary);
+}

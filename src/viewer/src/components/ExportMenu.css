@@ -1,0 +1,97 @@
+/* ===== Export Menu ===== */
+.export-menu {
+  position: relative;
+}
+
+.export-menu__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.export-menu__trigger:hover {
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+  background: var(--bg-tertiary);
+}
+
+.export-menu__trigger svg {
+  flex-shrink: 0;
+}
+
+.export-menu__chevron {
+  transition: transform var(--transition-fast);
+}
+
+.export-menu__chevron--open {
+  transform: rotate(180deg);
+}
+
+/* Dropdown */
+.export-menu__dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 200px;
+  padding: 4px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  animation: exportMenuSlideIn 0.15s ease;
+}
+
+@keyframes exportMenuSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Menu Items */
+.export-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition-fast);
+}
+
+.export-menu__item:hover {
+  background: var(--bg-tertiary);
+}
+
+.export-menu__item svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.export-menu__hint {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-family: "IBM Plex Mono", monospace;
+}

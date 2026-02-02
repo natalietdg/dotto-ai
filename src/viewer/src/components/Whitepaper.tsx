@@ -1,518 +1,1212 @@
-import './Whitepaper.css';
+import { useState, useEffect, useRef } from "react";
+import InteractiveDemo from "./InteractiveDemo";
+import EnforcementDemo from "./EnforcementDemo";
+import ReceiptDemo from "./ReceiptDemo";
+import TableOfContents from "./TableOfContents";
+import ScrollRevealSection from "./ScrollRevealSection";
+import "./Whitepaper.css";
 
-export default function Whitepaper() {
+// Progress Bar - shows scroll completion with completion badge
+function ProgressBar() {
+  const [progress, setProgress] = useState(0);
+  const [showBadge, setShowBadge] = useState(false);
+  const badgeShownRef = useRef(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrollPercent = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+      const newProgress = Math.min(scrollPercent, 100);
+      setProgress(newProgress);
+
+      // Show badge when reaching 95%+ for the first time
+      if (newProgress >= 95 && !badgeShownRef.current) {
+        badgeShownRef.current = true;
+        setShowBadge(true);
+        // Hide badge after 5 seconds
+        setTimeout(() => setShowBadge(false), 5000);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
-    <div className="whitepaper">
-      <div className="whitepaper__container">
-        <header className="whitepaper__header">
-          <h1 className="whitepaper__title">How Dotto Works</h1>
-          <p className="whitepaper__subtitle">
-            An AI-powered change-control governor for safe, auditable deployments
-          </p>
-          <p className="whitepaper__thesis">
-            Dotto treats software change as a governed act, not a technical event.
-          </p>
-        </header>
+    <>
+      <div className="progress-bar">
+        <div className="progress-bar__fill" style={{ width: `${progress}%` }} />
+        <span className="progress-bar__text">{Math.round(progress)}% complete</span>
+      </div>
+      {showBadge && (
+        <div className="completion-badge">
+          <span className="completion-badge__icon">✓</span>
+          <span className="completion-badge__title">Section complete</span>
+        </div>
+      )}
+    </>
+  );
+}
 
-        {/* Architecture Flow */}
-        <section className="whitepaper__section">
-          <h2 className="section__title">Architecture</h2>
-          <div className="architecture">
-            <div className="architecture__flow">
-              <div className="flow-step">
-                <div className="flow-step__icon">
-                  <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                  </svg>
-                </div>
-                <div className="flow-step__label">dotto</div>
-                <div className="flow-step__desc">Crawl & Diff</div>
-              </div>
+// Interactive Similarity Calculator
+function SimilarityCalculator() {
+  const [entityMatch, setEntityMatch] = useState(100);
+  const [breakingMatch, setBreakingMatch] = useState(100);
+  const [typeMatch, setTypeMatch] = useState(100);
+  const threshold = 60;
 
-              <div className="flow-connector">
-                <svg width="40" height="24" viewBox="0 0 40 24">
-                  <path d="M0 12 L30 12 M25 6 L35 12 L25 18" fill="none" stroke="currentColor" strokeWidth="2"/>
-                </svg>
-              </div>
+  const totalScore = Math.round(entityMatch * 0.5 + breakingMatch * 0.25 + typeMatch * 0.25);
+  const passes = totalScore >= threshold;
 
-              <div className="flow-step flow-step--highlight">
-                <div className="flow-step__icon">
-                  <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-                  </svg>
-                </div>
-                <div className="flow-step__label">Gemini 3</div>
-                <div className="flow-step__desc">AI Analysis</div>
-              </div>
+  const reset = () => {
+    setEntityMatch(100);
+    setBreakingMatch(100);
+    setTypeMatch(100);
+  };
 
-              <div className="flow-connector">
-                <svg width="40" height="24" viewBox="0 0 40 24">
-                  <path d="M0 12 L30 12 M25 6 L35 12 L25 18" fill="none" stroke="currentColor" strokeWidth="2"/>
-                </svg>
-              </div>
+  return (
+    <div className="similarity-calc">
+      <div className="similarity-calc__header">
+        <h4 className="similarity-calc__title">
+          <span>🎚️</span> Try It: Adjust Similarity Weights
+        </h4>
+        <button className="similarity-calc__reset" onClick={reset}>
+          Reset
+        </button>
+      </div>
 
-              <div className="flow-step">
-                <div className="flow-step__icon">
-                  <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
-                  </svg>
-                </div>
-                <div className="flow-step__label">Governance</div>
-                <div className="flow-step__desc">Approve / Block / Escalate</div>
-              </div>
+      <div className="similarity-calc__sliders">
+        <div className="similarity-calc__slider-row">
+          <span className="similarity-calc__slider-label">Entity Match</span>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={entityMatch}
+            onChange={(e) => setEntityMatch(Number(e.target.value))}
+            className="similarity-calc__slider"
+          />
+          <span className="similarity-calc__slider-value">{entityMatch}%</span>
+        </div>
+        <div className="similarity-calc__slider-row">
+          <span className="similarity-calc__slider-label">Breaking Match</span>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={breakingMatch}
+            onChange={(e) => setBreakingMatch(Number(e.target.value))}
+            className="similarity-calc__slider"
+          />
+          <span className="similarity-calc__slider-value">{breakingMatch}%</span>
+        </div>
+        <div className="similarity-calc__slider-row">
+          <span className="similarity-calc__slider-label">Type Match</span>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={typeMatch}
+            onChange={(e) => setTypeMatch(Number(e.target.value))}
+            className="similarity-calc__slider"
+          />
+          <span className="similarity-calc__slider-value">{typeMatch}%</span>
+        </div>
+      </div>
 
-              <div className="flow-connector">
-                <svg width="40" height="24" viewBox="0 0 40 24">
-                  <path d="M0 12 L30 12 M25 6 L35 12 L25 18" fill="none" stroke="currentColor" strokeWidth="2"/>
-                </svg>
-              </div>
+      <div
+        className={`similarity-calc__result ${passes ? "similarity-calc__result--pass" : "similarity-calc__result--fail"}`}
+      >
+        <div className="similarity-calc__score">
+          <span className="similarity-calc__score-label">Total Similarity</span>
+          <span className="similarity-calc__score-value">{totalScore}%</span>
+        </div>
+        <div
+          className={`similarity-calc__verdict ${passes ? "similarity-calc__verdict--pass" : "similarity-calc__verdict--fail"}`}
+        >
+          <span className="similarity-calc__verdict-icon">{passes ? "✓" : "✕"}</span>
+          <span>{passes ? "Auto-authorized" : "Requires review"}</span>
+        </div>
+      </div>
 
-              <div className="flow-step">
-                <div className="flow-step__icon">
-                  <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12a7.5 7.5 0 0015 0m-15 0a7.5 7.5 0 1115 0m-15 0H3m16.5 0H21m-1.5 0H12m-8.457 3.077l1.41-.513m14.095-5.13l1.41-.513M5.106 17.785l1.15-.964m11.49-9.642l1.149-.964M7.501 19.795l.75-1.3m7.5-12.99l.75-1.3m-6.063 16.658l.26-1.477m2.605-14.772l.26-1.477m0 17.726l-.26-1.477M10.698 4.614l-.26-1.477M16.5 19.794l-.75-1.299M7.5 4.205L12 12m6.894 5.785l-1.149-.964M6.256 7.178l-1.15-.964m15.352 8.864l-1.41-.513M4.954 9.435l-1.41-.514M12.002 12l-3.75 6.495" />
-                  </svg>
-                </div>
-                <div className="flow-step__label">CI</div>
-                <div className="flow-step__desc">Gate Pipeline</div>
-              </div>
+      <p className="similarity-calc__threshold-note">
+        Threshold: {threshold}% • Formula: (Entity × 0.5) + (Breaking × 0.25) + (Type × 0.25)
+      </p>
+    </div>
+  );
+}
 
-              <div className="flow-connector">
-                <svg width="40" height="24" viewBox="0 0 40 24">
-                  <path d="M0 12 L30 12 M25 6 L35 12 L25 18" fill="none" stroke="currentColor" strokeWidth="2"/>
-                </svg>
-              </div>
+// Jargon Tooltip - hover to reveal definition
+function Jargon({ definition, children }: { definition: string; children: React.ReactNode }) {
+  return (
+    <span className="jargon">
+      {children}
+      <span className="jargon__tooltip">{definition}</span>
+    </span>
+  );
+}
 
-              <div className="flow-step">
-                <div className="flow-step__icon">
-                  <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
-                  </svg>
-                </div>
-                <div className="flow-step__label">Precedent</div>
-                <div className="flow-step__desc">Binding Memory</div>
-              </div>
+// Impact Metrics - key numbers callout with scroll animation
+function ImpactMetrics() {
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.2 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={`impact-metrics scroll-reveal ${isVisible ? "scroll-reveal--visible" : ""}`}
+    >
+      <h3 className="impact-metrics__title">With Dotto, the system guarantees:</h3>
+      <div className="impact-metrics__grid">
+        <div className="impact-metrics__stat">
+          <span className="impact-metrics__icon">🔒</span>
+          <span className="impact-metrics__value">No silent production changes</span>
+          <span className="impact-metrics__label">Deployment requires a signed human receipt</span>
+        </div>
+        <div className="impact-metrics__stat">
+          <span className="impact-metrics__icon">🧾</span>
+          <span className="impact-metrics__value">Every decision is auditable</span>
+          <span className="impact-metrics__label">Immutable receipts bound to exact artifacts</span>
+        </div>
+        <div className="impact-metrics__stat">
+          <span className="impact-metrics__icon">🤖</span>
+          <span className="impact-metrics__value">AI is advisory only</span>
+          <span className="impact-metrics__label">Gemini can recommend, never authorize</span>
+        </div>
+        <div className="impact-metrics__stat">
+          <span className="impact-metrics__icon">🔁</span>
+          <span className="impact-metrics__value">Governance cost decreases over time</span>
+          <span className="impact-metrics__label">Precedent enables auto-authorization</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Aha Moment - Before/After pain comparison
+function AhaMoment() {
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.2 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <section
+      ref={ref}
+      className={`aha-moment scroll-reveal ${isVisible ? "scroll-reveal--visible" : ""}`}
+    >
+      <div
+        className={`aha-moment__container scroll-reveal-stagger ${isVisible ? "scroll-reveal-stagger--visible" : ""}`}
+      >
+        <div className="aha-moment__scenario aha-moment__scenario--before">
+          <span className="aha-moment__label">Without Dotto</span>
+          <div className="aha-moment__timeline">
+            <div className="aha-moment__event">
+              <span className="aha-moment__icon">⚠</span>
+              <span className="aha-moment__text">Breaking schema change deploys</span>
+            </div>
+            <div className="aha-moment__arrow">→</div>
+            <div className="aha-moment__event">
+              <span className="aha-moment__icon">✕</span>
+              <span className="aha-moment__text">Downstream services fail</span>
+            </div>
+            <div className="aha-moment__arrow">→</div>
+            <div className="aha-moment__event aha-moment__event--bad">
+              <span className="aha-moment__icon">↺</span>
+              <span className="aha-moment__text">Emergency rollback required</span>
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* What is Dotto */}
-        <section className="whitepaper__section">
-          <h2 className="section__title">What is Dotto?</h2>
-          <div className="content-block">
-            <p>
-              Dotto is an <strong>AI-powered change-control governor</strong> that sits between your code changes
-              and production deployment. Deterministic systems handle detection; <strong>Gemini 3 makes governance decisions under uncertainty</strong>.
-            </p>
-            <p>
-              When policies conflict, precedents are ambiguous, or risk tradeoffs require nuance—<strong>this is where
-              most CI pipelines either blindly pass or blindly block</strong>. Dotto asks Gemini to make a governance
-              decision, not a guess.
-            </p>
-            <p>
-              Dotto does for software change what regulators do for financial markets: <strong>it allows innovation,
-              but not recklessness</strong>.
-            </p>
-          </div>
-        </section>
+        <div className="aha-moment__divider">
+          <span>vs</span>
+        </div>
 
-        {/* What is Drift */}
-        <section className="whitepaper__section">
-          <h2 className="section__title">What is Drift?</h2>
-          <div className="content-block">
-            <p>
-              <strong>Drift</strong> refers to the difference between your current code and a baseline (typically your main branch).
-              When you modify schemas, APIs, or data structures, dotto detects these changes and classifies them as either
-              <strong> breaking</strong> or <strong>non-breaking</strong>.
-            </p>
-            <p>
-              <strong>Breaking drift</strong> includes changes that could cause failures in downstream systems:
-            </p>
-          </div>
-          <div className="steps-grid" style={{ marginTop: '16px' }}>
-            <div className="step-card">
-              <div className="step-card__num">!</div>
-              <h3 className="step-card__title">Field Renamed</h3>
-              <p className="step-card__desc">
-                <code>userId</code> → <code>customerId</code><br />
-                Existing code expecting <code>userId</code> will fail.
-              </p>
+        <div className="aha-moment__scenario aha-moment__scenario--after">
+          <span className="aha-moment__label">With Dotto</span>
+          <div className="aha-moment__timeline">
+            <div className="aha-moment__event">
+              <span className="aha-moment__icon">◎</span>
+              <span className="aha-moment__text">CI blocks unapproved change</span>
             </div>
-            <div className="step-card">
-              <div className="step-card__num">!</div>
-              <h3 className="step-card__title">Type Changed</h3>
-              <p className="step-card__desc">
-                <code>amount: number</code> → <code>amount: PaymentAmount</code><br />
-                Type mismatch breaks serialization.
-              </p>
+            <div className="aha-moment__arrow">→</div>
+            <div className="aha-moment__event">
+              <span className="aha-moment__icon">👤</span>
+              <span className="aha-moment__text">Human reviews in seconds</span>
             </div>
-            <div className="step-card">
-              <div className="step-card__num">!</div>
-              <h3 className="step-card__title">Required Field Added</h3>
-              <p className="step-card__desc">
-                New required <code>idempotencyKey</code> field.<br />
-                Existing requests without it will fail validation.
-              </p>
-            </div>
-            <div className="step-card">
-              <div className="step-card__num">!</div>
-              <h3 className="step-card__title">Enum Values Changed</h3>
-              <p className="step-card__desc">
-                <code>pending</code> → <code>initiated</code><br />
-                Status checks using old values will break.
-              </p>
+            <div className="aha-moment__arrow">→</div>
+            <div className="aha-moment__event aha-moment__event--good">
+              <span className="aha-moment__icon">✓</span>
+              <span className="aha-moment__text">Authorized deployment proceeds</span>
             </div>
           </div>
-          <div className="content-block" style={{ marginTop: '20px' }}>
-            <p>
-              <strong>Non-breaking drift</strong> includes additive changes like new optional fields or new interfaces
-              that don't affect existing consumers.
-            </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Drift Demo - Animated diff with morphing highlights
+function DriftDemo() {
+  const [isVisible, setIsVisible] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const breakingTypes = [
+    { label: "Field Renamed", example: "userId → customerId", category: "syntax" },
+    { label: "Type Changed", example: "number → PaymentAmount", category: "syntax" },
+    { label: "Intent Drift", example: "Same field, different meaning", category: "intent" },
+  ];
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !isVisible) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.3 }
+    );
+
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [isVisible]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+
+    const timer = setTimeout(() => {
+      setHighlightIndex(0);
+    }, 500);
+
+    const cycleTimer = setInterval(() => {
+      setHighlightIndex((prev) => (prev + 1) % 3);
+    }, 2000);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(cycleTimer);
+    };
+  }, [isVisible]);
+
+  return (
+    <div ref={ref} className="drift-demo">
+      <div className="drift-demo__panels">
+        <div className={`drift-demo__panel ${isVisible ? "drift-demo__panel--visible" : ""}`}>
+          <div className="drift-demo__panel-header">
+            <span className="drift-demo__label">main</span>
           </div>
-        </section>
+          <pre className="drift-demo__code">
+            <span className="drift-demo__keyword">interface</span> Payment {"{"}
+            {"\n"}
+            {"  "}
+            <span className={highlightIndex === 0 ? "drift-demo__old-value" : ""}>
+              userId
+            </span>: <span className="drift-demo__type-token">string</span>;{"\n"}
+            {"  "}amount:{" "}
+            <span className={highlightIndex === 1 ? "drift-demo__old-value" : ""}>
+              <span className="drift-demo__type-token">number</span>
+            </span>
+            ;{"\n"}
+            {"  "}status:{" "}
+            <span className={highlightIndex === 2 ? "drift-demo__old-value" : ""}>
+              <span className="drift-demo__string">&quot;pending&quot;</span>
+            </span>
+            ;{"\n"}
+            {"}"}
+          </pre>
+        </div>
 
-        {/* How It Works */}
-        <section className="whitepaper__section">
-          <h2 className="section__title">How It Works</h2>
+        <div className={`drift-demo__arrow ${isVisible ? "drift-demo__arrow--visible" : ""}`}>
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </div>
 
-          <div className="steps-grid">
-            <div className="step-card">
-              <div className="step-card__num">1</div>
-              <h3 className="step-card__title">Crawl & Diff</h3>
-              <p className="step-card__desc">
-                Dotto crawls your codebase to build a dependency graph of schemas, APIs, DTOs, and services.
-                It then computes a structured diff between Git states to identify exactly what changed.
-              </p>
-              <div className="step-card__artifacts">
-                <code>graph.json</code>
-                <code>drift.json</code>
-              </div>
-            </div>
-
-            <div className="step-card">
-              <div className="step-card__num">2</div>
-              <h3 className="step-card__title">AI Analysis</h3>
-              <p className="step-card__desc">
-                The Gemini 3 model analyzes the changes against your policy rules. It evaluates breaking changes,
-                blast radius, PII exposure, and compliance requirements to assess risk.
-              </p>
-              <div className="step-card__artifacts">
-                <code>intent.json</code>
-                <code>impact.json</code>
-              </div>
-            </div>
-
-            <div className="step-card">
-              <div className="step-card__num">3</div>
-              <h3 className="step-card__title">Governance Decision</h3>
-              <p className="step-card__desc">
-                Based on the analysis, Dotto issues one of three governance decisions:
-              </p>
-              <div className="decision-types">
-                <div className="decision-type decision-type--approve">
-                  <strong>Approve</strong> — Safe to deploy
-                </div>
-                <div className="decision-type decision-type--escalate">
-                  <strong>Escalate</strong> — Requires human authority
-                </div>
-                <div className="decision-type decision-type--block">
-                  <strong>Block</strong> — Change rejected
-                </div>
-              </div>
-            </div>
-
-            <div className="step-card">
-              <div className="step-card__num">4</div>
-              <h3 className="step-card__title">CI Gate</h3>
-              <p className="step-card__desc">
-                The decision gates your CI/CD pipeline. Approved changes proceed automatically.
-                Escalated changes pause for human approval. Blocked changes fail the pipeline.
-              </p>
-              <div className="step-card__code">
-                <code>dotto run --ci</code>
-              </div>
-            </div>
-
-            <div className="step-card">
-              <div className="step-card__num">5</div>
-              <h3 className="step-card__title">Precedent Memory</h3>
-              <p className="step-card__desc">
-                Every governance decision is logged with human authority. These become binding precedent
-                for future judgments—the system learns your organization's standards.
-              </p>
-              <div className="step-card__artifacts">
-                <code>decisions.json</code>
-              </div>
-            </div>
+        <div
+          className={`drift-demo__panel drift-demo__panel--changed ${isVisible ? "drift-demo__panel--visible" : ""}`}
+        >
+          <div className="drift-demo__panel-header">
+            <span className="drift-demo__label">feature/payment-v2</span>
+            <span className="drift-demo__badge">3 breaking</span>
           </div>
-        </section>
+          <pre className="drift-demo__code">
+            <span className="drift-demo__keyword">interface</span> Payment {"{"}
+            {"\n"}
+            {"  "}
+            <span
+              className={`drift-demo__changed ${highlightIndex === 0 ? "drift-demo__changed--active" : ""}`}
+            >
+              customerId
+            </span>
+            : <span className="drift-demo__type-token">string</span>;{"\n"}
+            {"  "}amount:{" "}
+            <span
+              className={`drift-demo__changed ${highlightIndex === 1 ? "drift-demo__changed--active" : ""}`}
+            >
+              PaymentAmount
+            </span>
+            ;{"\n"}
+            {"  "}status:{" "}
+            <span
+              className={`drift-demo__changed ${highlightIndex === 2 ? "drift-demo__changed--active" : ""}`}
+            >
+              &quot;initiated&quot;
+            </span>
+            ;{"\n"}
+            {"}"}
+          </pre>
+        </div>
+      </div>
 
-        {/* Policy Rules */}
-        <section className="whitepaper__section">
-          <h2 className="section__title">Policy Rules</h2>
-          <div className="content-block">
-            <p>
-              Dotto enforces customizable policy rules that define what requires escalation or blocking:
-            </p>
-            <div className="rules-example">
-              <pre>{`{
-  "rules": [
+      <div className="drift-demo__types">
+        {breakingTypes.map((type, i) => (
+          <div
+            key={i}
+            className={`drift-demo__type ${highlightIndex === i ? "drift-demo__type--active" : ""} ${isVisible ? "drift-demo__type--visible" : ""}`}
+            style={{ transitionDelay: `${i * 100 + 300}ms` }}
+          >
+            <span className="drift-demo__type-label">{type.label}</span>
+            <code className="drift-demo__type-example">{type.example}</code>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Separation of Powers Flow - Animated visual flow
+function SeparationOfPowersFlow() {
+  const [isVisible, setIsVisible] = useState(false);
+  const [activeStep, setActiveStep] = useState(-1);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const steps = [
     {
-      "id": "no_pii_drift",
-      "description": "PII schemas must never drift without escalation",
-      "match": { "tags_any": ["pii"] },
-      "action": "escalate"
+      icon: (
+        <svg
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <path d="M21 21l-4.35-4.35" />
+        </svg>
+      ),
+      label: "Detection",
+      desc: "Deterministic",
+      badge: "Code Analysis",
+      color: "#3b82f6",
     },
     {
-      "id": "payments_breaking_change",
-      "description": "Breaking changes in payment systems require approval",
-      "match": { "systems_any": ["payments"], "breaking": true },
-      "action": "escalate"
-    }
-  ]
+      icon: (
+        <svg
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+        </svg>
+      ),
+      label: "Recommendation",
+      desc: "Gemini (Advisory)",
+      badge: "AI Insight",
+      color: "#9b72cb",
+    },
+    {
+      icon: (
+        <svg
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+      ),
+      label: "Authorization",
+      desc: "Human",
+      badge: "Final Authority",
+      color: "#22c55e",
+    },
+    {
+      icon: (
+        <svg
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+      ),
+      label: "Enforcement",
+      desc: "CI Gate",
+      badge: "Immutable",
+      color: "#ef4444",
+    },
+  ];
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !isVisible) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.3 }
+    );
+
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [isVisible]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+
+    const timers = steps.map((_, i) => setTimeout(() => setActiveStep(i), 400 + i * 500));
+
+    return () => timers.forEach(clearTimeout);
+  }, [isVisible]);
+
+  return (
+    <div ref={ref} className="sop-flow">
+      <div className="sop-flow__steps">
+        {steps.map((step, i) => (
+          <div key={i} className="sop-flow__step-wrapper">
+            <div
+              className={`sop-flow__step ${activeStep >= i ? "sop-flow__step--active" : ""}`}
+              style={
+                {
+                  transitionDelay: `${i * 100}ms`,
+                  "--step-color": step.color,
+                } as React.CSSProperties
+              }
+            >
+              <div className="sop-flow__icon">{step.icon}</div>
+              <div className="sop-flow__label">{step.label}</div>
+              <div className="sop-flow__desc">{step.desc}</div>
+              <div
+                className="sop-flow__badge"
+                style={{ background: `${step.color}20`, color: step.color }}
+              >
+                {step.badge}
+              </div>
+            </div>
+            {i < steps.length - 1 && (
+              <div
+                className={`sop-flow__connector ${activeStep > i ? "sop-flow__connector--active" : ""}`}
+              >
+                <svg width="40" height="20" viewBox="0 0 40 20">
+                  <path
+                    d="M0 10 L30 10 M25 5 L35 10 L25 15"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <p className={`sop-flow__caption ${activeStep >= 3 ? "sop-flow__caption--visible" : ""}`}>
+        Authority flows right. Memory flows forward.
+      </p>
+    </div>
+  );
+}
+
+export default function Whitepaper() {
+  const [viewMode, setViewMode] = useState<"overview" | "technical">("overview");
+
+  return (
+    <div className="whitepaper">
+      <TableOfContents viewMode={viewMode} />
+      <div className="whitepaper__container">
+        {/* Hero - Interactive Demo - ALWAYS SHOWN */}
+        <InteractiveDemo />
+
+        {/* View Mode Toggle */}
+        <div className="view-mode-toggle view-mode-toggle--top">
+          <button
+            className={`view-mode-toggle__btn ${viewMode === "overview" ? "view-mode-toggle__btn--active" : ""}`}
+            onClick={() => setViewMode("overview")}
+          >
+            <span className="view-mode-toggle__icon">✨</span>
+            <span className="view-mode-toggle__label">Conceptual</span>
+            <span className="view-mode-toggle__subtitle">high-level, visual</span>
+          </button>
+          <button
+            className={`view-mode-toggle__btn ${viewMode === "technical" ? "view-mode-toggle__btn--active" : ""}`}
+            onClick={() => setViewMode("technical")}
+          >
+            <span className="view-mode-toggle__icon">⚙️</span>
+            <span className="view-mode-toggle__label">Deep Dive</span>
+            <span className="view-mode-toggle__subtitle">technical, deterministic</span>
+          </button>
+        </div>
+        <p className="view-mode-explainer">
+          Conceptual explains <em>why</em>. Deep Dive proves <em>how</em>.
+        </p>
+
+        {viewMode === "overview" && (
+          <>
+            <AhaMoment />
+
+            <ImpactMetrics />
+
+            {/* Who Benefits */}
+            <section id="who-benefits" className="whitepaper__section whitepaper__section--visible">
+              <h2 className="section__title">Who Benefits</h2>
+              <div className="content-block">
+                <p>Teams shipping to production under compliance, safety, or trust constraints.</p>
+              </div>
+              <div className="steps-grid" style={{ marginTop: "20px" }}>
+                <div className="step-card">
+                  <div className="step-card__num">🏦</div>
+                  <h3 className="step-card__title">Financial Services</h3>
+                  <p className="step-card__desc">Audit trails. Compliance-ready receipts.</p>
+                </div>
+                <div className="step-card">
+                  <div className="step-card__num">🏥</div>
+                  <h3 className="step-card__title">Healthcare</h3>
+                  <p className="step-card__desc">Human-authorized changes. HIPAA-aligned.</p>
+                </div>
+                <div className="step-card">
+                  <div className="step-card__num">🔐</div>
+                  <h3 className="step-card__title">Security-Critical</h3>
+                  <p className="step-card__desc">No silent changes. Cryptographic authorization.</p>
+                </div>
+                <div className="step-card">
+                  <div className="step-card__num">🚀</div>
+                  <h3 className="step-card__title">Fast-Moving Teams</h3>
+                  <p className="step-card__desc">Auto-authorization. Governance gets cheaper.</p>
+                </div>
+              </div>
+            </section>
+
+            {/* Separation of Powers */}
+            <section
+              id="separation-of-powers"
+              className="whitepaper__section whitepaper__section--visible"
+            >
+              <h2 className="section__title">Separation of Powers</h2>
+              <p className="section__preface">
+                Authority is divided to prevent silent production change.
+              </p>
+              <SeparationOfPowersFlow />
+            </section>
+
+            {/* AI Review vs Governance */}
+            <section
+              id="why-ai-review-is-not-governance"
+              className="whitepaper__section whitepaper__section--visible"
+            >
+              <h2 className="section__title">Why AI Review Is Not Governance</h2>
+              <p className="section__preface">Analysis is not authority.</p>
+
+              <p className="section__body">
+                Modern AI systems are increasingly capable of analyzing code changes, identifying
+                risks, and suggesting remediation. However, analysis alone cannot authorize
+                production change.
+              </p>
+
+              <p className="section__body">Dotto draws a strict boundary between:</p>
+
+              <div className="boundary-cards">
+                <div className="boundary-card">
+                  <h3 className="boundary-card__title">Analysis</h3>
+                  <p className="boundary-card__desc">
+                    Understanding what changed and what might break
+                  </p>
+                </div>
+                <div className="boundary-card boundary-card--primary">
+                  <h3 className="boundary-card__title">Governance</h3>
+                  <p className="boundary-card__desc">
+                    Deciding whether a change is allowed to proceed
+                  </p>
+                </div>
+              </div>
+
+              <p className="section__body">Authorization requires:</p>
+              <ul className="auth-requirements">
+                <li>Declared human intent</li>
+                <li>Accountable decision-making</li>
+                <li>Immutable, auditable records</li>
+              </ul>
+
+              <p className="section__body section__body--emphasis">
+                For this reason, Dotto treats all AI output as <strong>advisory by design</strong>.
+                Final authority is explicitly reserved for humans, and enforcement is automatic.
+              </p>
+
+              <p className="section__body">
+                This separation ensures that production systems remain safe, auditable, and
+                compliant — even as AI analysis improves.
+              </p>
+            </section>
+
+            {/* Core Loop */}
+            <section id="how-it-works" className="whitepaper__section whitepaper__section--visible">
+              <h2 className="section__title">How It Works</h2>
+              <p className="section__threat">
+                One unauthorized change can silently break production.
+                <br />
+                <strong>Dotto makes that impossible.</strong>
+              </p>
+
+              <div className="core-loop">
+                <div className="core-loop__step">Code Change</div>
+                <div className="core-loop__arrow">↓</div>
+                <div className="core-loop__step">Drift Detected</div>
+                <div className="core-loop__arrow">↓</div>
+                <div className="core-loop__step core-loop__step--gemini">
+                  Gemini Insight <span className="core-loop__tag">Advisory</span>
+                </div>
+                <div className="core-loop__arrow">↓</div>
+                <div className="core-loop__step core-loop__step--human">
+                  Human Judgment <span className="core-loop__tag">Binding</span>
+                </div>
+                <div className="core-loop__arrow">↓</div>
+                <div className="core-loop__step">Receipt + Precedent</div>
+                <div className="core-loop__feedback">↺ future changes cheaper</div>
+              </div>
+
+              <h3 className="section__subtitle">Governance Lifecycle</h3>
+              <div className="steps-grid">
+                <div className="step-card">
+                  <div className="step-card__num">1</div>
+                  <h3 className="step-card__title">Detect</h3>
+                  <p className="step-card__desc">
+                    Deterministic analysis. Breaking vs non-breaking drift.
+                  </p>
+                </div>
+                <div className="step-card">
+                  <div className="step-card__num">2</div>
+                  <h3 className="step-card__title">Recommend</h3>
+                  <p className="step-card__microcopy">Advisory only</p>
+                  <p className="step-card__desc">Gemini evaluates against policy + precedent.</p>
+                </div>
+                <div className="step-card step-card--primary">
+                  <div className="step-card__num">3</div>
+                  <h3 className="step-card__title">Authorize</h3>
+                  <p className="step-card__microcopy">Final authority</p>
+                  <p className="step-card__desc">
+                    Human issues binding authorization. Gates deployment.
+                  </p>
+                </div>
+              </div>
+              <p className="lifecycle-note">
+                Enforcement is automatic and occurs after authorization.
+              </p>
+            </section>
+
+            {/* Closing - Overview */}
+            <section className="whitepaper__section whitepaper__section--closing whitepaper__section--visible">
+              <div className="cta-section">
+                <h2 className="cta-section__title">Every change. Every time. No exceptions.</h2>
+                <p className="cta-section__subtitle">
+                  No receipt, no production change. Every ruling is auditable.
+                </p>
+                <button className="cta-btn">
+                  <span className="cta-btn__icon">⚡</span>
+                  Try a Breaking Change
+                </button>
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* ============================================ */}
+        {/* TECHNICAL MODE - Full documentation */}
+        {/* ============================================ */}
+        {viewMode === "technical" && (
+          <>
+            {/* What is Dotto */}
+            <section
+              id="what-is-dotto"
+              className="whitepaper__section whitepaper__section--visible"
+            >
+              <h2 className="section__title">What is Dotto?</h2>
+              <div className="content-block">
+                <p>Dotto is a change-control governor between code and production.</p>
+                <p>It evaluates detected change against policy and precedent.</p>
+                <p>When rules are insufficient, it issues a recommendation.</p>
+                <p>
+                  <strong>Only humans authorize outcomes.</strong>
+                </p>
+              </div>
+            </section>
+
+            {/* What is Drift */}
+            <section
+              id="what-is-drift"
+              className="whitepaper__section whitepaper__section--visible whitepaper__section--alt"
+            >
+              <h2 className="section__title">What is Drift?</h2>
+              <p className="section__preface">Drift is the factual basis for governance.</p>
+              <div className="content-block">
+                <p>
+                  <Jargon definition="The difference between your current code and a baseline. Detected automatically.">
+                    <strong>Drift</strong>
+                  </Jargon>{" "}
+                  refers to the difference between your current code and a baseline. When you modify
+                  schemas, APIs, or data structures, dotto detects these changes and classifies them
+                  as{" "}
+                  <Jargon definition="A change that could break downstream consumers, like renaming a field.">
+                    <strong>breaking</strong>
+                  </Jargon>{" "}
+                  or{" "}
+                  <Jargon definition="A change that is backwards-compatible, like adding an optional field.">
+                    <strong>non-breaking</strong>
+                  </Jargon>
+                  .
+                </p>
+              </div>
+              <DriftDemo />
+              <div className="steps-grid" style={{ marginTop: "16px" }}>
+                <div className="step-card">
+                  <div className="step-card__num">!</div>
+                  <h3 className="step-card__title">Field Renamed</h3>
+                  <p className="step-card__desc">
+                    <code>userId</code> → <code>customerId</code>
+                  </p>
+                </div>
+                <div className="step-card">
+                  <div className="step-card__num">!</div>
+                  <h3 className="step-card__title">Type Changed</h3>
+                  <p className="step-card__desc">
+                    <code>amount: number</code> → <code>amount: PaymentAmount</code>
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            {/* Scope of Detection */}
+            <section
+              id="scope-of-detection"
+              className="whitepaper__section whitepaper__section--visible"
+            >
+              <h2 className="section__title">Scope of Detection</h2>
+              <p className="section__preface">
+                Dotto only governs where teams have legitimate authority.
+              </p>
+              <div className="content-block">
+                <p>
+                  Dotto governs drift at the <strong>service boundary</strong>.
+                </p>
+                <p>
+                  Each service produces a deterministic dependency graph (<code>graph.json</code>).
+                </p>
+              </div>
+              <div className="scope-flow">
+                <div className="scope-flow__step">Service</div>
+                <div className="scope-flow__arrow">→</div>
+                <div className="scope-flow__step scope-flow__step--artifact">graph.json</div>
+                <div className="scope-flow__arrow">→</div>
+                <div className="scope-flow__step">Federation</div>
+                <div className="scope-flow__arrow">→</div>
+                <div className="scope-flow__step">Impact</div>
+              </div>
+            </section>
+
+            {/* Intent-Aware Governance */}
+            <section
+              id="intent-aware"
+              className="whitepaper__section whitepaper__section--visible whitepaper__section--alt"
+            >
+              <h2 className="section__title">Intent-Aware Governance</h2>
+              <p className="section__preface">
+                Drift tells us <em>what</em> changed. Intent tells us <em>whether it should</em>.
+              </p>
+              <div className="content-block">
+                <p>
+                  Syntactic drift (field renames, type changes) is deterministic. But two fields can
+                  have the same name and different meanings — or different names and the same
+                  meaning.
+                </p>
+                <p>
+                  <Jargon definition="When a field's semantic purpose diverges from its documented intent, even if the syntax is valid.">
+                    <strong>Intent drift</strong>
+                  </Jargon>{" "}
+                  occurs when the <em>purpose</em> of a field changes, not just its shape.
+                </p>
+              </div>
+              <div className="intent-comparison">
+                <div className="intent-card intent-card--missing">
+                  <div className="intent-card__header">
+                    <span className="intent-card__icon">⚠️</span>
+                    <span className="intent-card__label">Intent Missing</span>
+                  </div>
+                  <div className="intent-card__example">
+                    <code>status: string</code>
+                    <span className="intent-card__desc">No documented purpose</span>
+                  </div>
+                  <div className="intent-card__outcome intent-card__outcome--escalate">
+                    → Escalate to human
+                  </div>
+                </div>
+                <div className="intent-card intent-card--present">
+                  <div className="intent-card__header">
+                    <span className="intent-card__icon">✓</span>
+                    <span className="intent-card__label">Intent Declared</span>
+                  </div>
+                  <div className="intent-card__example">
+                    <code>@intent(&quot;payment lifecycle state&quot;)</code>
+                    <span className="intent-card__desc">Purpose is documented</span>
+                  </div>
+                  <div className="intent-card__outcome intent-card__outcome--allow">
+                    → Can match precedent
+                  </div>
+                </div>
+              </div>
+              <p className="section__note">
+                Gemini analyzes intent alignment. Humans authorize when intent is ambiguous.
+              </p>
+            </section>
+
+            {/* Governance Lifecycle */}
+            <section
+              id="governance-lifecycle"
+              className="whitepaper__section whitepaper__section--visible"
+            >
+              <h2 className="section__title">Governance Lifecycle</h2>
+              <div className="steps-grid">
+                <div className="step-card">
+                  <div className="step-card__num">1</div>
+                  <h3 className="step-card__title">Detect</h3>
+                  <p className="step-card__desc">
+                    Deterministic crawl. Structured diff between Git states.
+                  </p>
+                  <div className="step-card__artifacts">
+                    <code>graph.json</code>
+                    <code>drift.json</code>
+                  </div>
+                </div>
+                <div className="step-card">
+                  <div className="step-card__num">2</div>
+                  <h3 className="step-card__title">Recommend</h3>
+                  <p className="step-card__microcopy">Advisory only — cannot act</p>
+                  <p className="step-card__desc">Gemini evaluates against policy + precedent.</p>
+                  <div className="step-card__artifacts">
+                    <code>policy.json</code>
+                    <code>decisions.json</code>
+                  </div>
+                </div>
+                <div className="step-card step-card--primary">
+                  <div className="step-card__num">3</div>
+                  <h3 className="step-card__title">Authorize</h3>
+                  <p className="step-card__microcopy">Final authority — irreversible</p>
+                  <p className="step-card__desc">
+                    Human issues authorization. Stored as precedent.
+                  </p>
+                  <div className="step-card__code">
+                    <code>dotto run --ci</code>
+                  </div>
+                </div>
+              </div>
+              <p className="lifecycle-note">
+                Enforcement is automatic and occurs after authorization.
+              </p>
+
+              {/* Technical Deep Dive */}
+              <div className="deep-dive-content">
+                <div className="content-block">
+                  <h4>Artifact Pipeline</h4>
+                  <p>
+                    Each stage produces immutable artifacts. Detection outputs{" "}
+                    <code>graph.json</code> and <code>drift.json</code>. These feed into{" "}
+                    <code>policy.json</code> and <code>decisions.json</code>.
+                  </p>
+                </div>
+                <div className="content-block">
+                  <h4>Deterministic Hashing</h4>
+                  <p>
+                    Every artifact is SHA-256 hashed. The receipt binds the ruling to exact hashes.
+                  </p>
+                </div>
+                <div className="content-block">
+                  <h4>Failure Handling</h4>
+                  <div className="failure-modes">
+                    <div className="failure-mode">
+                      <span className="failure-mode__trigger">Missing artifacts</span>
+                      <span className="failure-mode__arrow">→</span>
+                      <span className="failure-mode__outcome">escalation</span>
+                    </div>
+                    <div className="failure-mode">
+                      <span className="failure-mode__trigger">Invalid receipt</span>
+                      <span className="failure-mode__arrow">→</span>
+                      <span className="failure-mode__outcome failure-mode__outcome--block">
+                        hard block
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Policy Rules */}
+            <ScrollRevealSection id="policy-rules" className="whitepaper__section">
+              <h2 className="section__title">Policy Rules</h2>
+              <p className="section__constraint">
+                Policy rules constrain outcomes — never authorize.
+              </p>
+              <div className="policy-rules__grid">
+                <div className="policy-rule-card">
+                  <div className="policy-rule-card__header">
+                    <span className="policy-rule-card__icon">🔒</span>
+                    <span className="policy-rule-card__name">no_pii_drift</span>
+                    <span className="policy-rule-card__badge policy-rule-card__badge--escalate">
+                      Escalate
+                    </span>
+                  </div>
+                  <p className="policy-rule-card__desc">
+                    PII schemas must never drift without escalation
+                  </p>
+                </div>
+                <div className="policy-rule-card">
+                  <div className="policy-rule-card__header">
+                    <span className="policy-rule-card__icon">💳</span>
+                    <span className="policy-rule-card__name">payments_breaking</span>
+                    <span className="policy-rule-card__badge policy-rule-card__badge--escalate">
+                      Escalate
+                    </span>
+                  </div>
+                  <p className="policy-rule-card__desc">
+                    Breaking payment changes require approval
+                  </p>
+                </div>
+              </div>
+            </ScrollRevealSection>
+
+            {/* Authorization Receipt */}
+            <section
+              id="authorization-receipt"
+              className="whitepaper__section whitepaper__section--visible whitepaper__section--alt"
+            >
+              <h2 className="section__title">Authorization Receipt</h2>
+              <p className="section__preface">
+                The{" "}
+                <Jargon definition="A cryptographically signed artifact that proves a human authorized this specific change.">
+                  receipt
+                </Jargon>{" "}
+                is not evidence. It is the approval.
+              </p>
+              <div className="rules-example" style={{ marginTop: "20px" }}>
+                <pre>{`{
+  "change_id": "pr-847-abc123",
+  "ruling": "approve",
+  "artifact_hash": "sha256:e3b0c44298fc...",
+  "signature": "dotto:v1:abc123..."
 }`}</pre>
-            </div>
-          </div>
-        </section>
+              </div>
+              <div className="content-block" style={{ marginTop: "20px" }}>
+                <p>
+                  <strong>Receipts are capabilities, not logs.</strong> Without a valid receipt,
+                  production cannot change.
+                </p>
+              </div>
+              <ReceiptDemo />
+            </section>
 
-        {/* Structured Reasoning Trace */}
-        <section className="whitepaper__section">
-          <h2 className="section__title">Structured Reasoning Trace</h2>
-          <div className="content-block">
-            <p>
-              Unlike black-box AI systems, Dotto provides a <strong>complete audit trail of decision rationale</strong>.
-              The AI governor analyzes changes step-by-step:
-            </p>
-          </div>
-          <div className="steps-grid" style={{ marginTop: '20px' }}>
-            <div className="step-card">
-              <div className="step-card__num">1</div>
-              <h3 className="step-card__title">Schema Analysis</h3>
-              <p className="step-card__desc">
-                "I see PaymentSchema.ts has been modified. The <code>userId</code> field was renamed to <code>customerId</code>.
-                This is a breaking change that will affect all downstream consumers."
-              </p>
-            </div>
-            <div className="step-card">
-              <div className="step-card__num">2</div>
-              <h3 className="step-card__title">Breaking Change Detection</h3>
-              <p className="step-card__desc">
-                "The <code>amount</code> field changed from <code>number</code> to <code>PaymentAmount</code> object.
-                Any service expecting a number will fail. This is HIGH severity."
-              </p>
-            </div>
-            <div className="step-card">
-              <div className="step-card__num">3</div>
-              <h3 className="step-card__title">Policy Evaluation</h3>
-              <p className="step-card__desc">
-                "Checking against policy rules... Rule 'payments_breaking_change' matches: breaking changes
-                in payment systems require escalation."
-              </p>
-            </div>
-            <div className="step-card">
-              <div className="step-card__num">4</div>
-              <h3 className="step-card__title">Blast Radius</h3>
-              <p className="step-card__desc">
-                "PaymentService.ts imports Payment. PaymentsAPI imports PaymentService.
-                Total blast radius: 4 files directly impacted."
-              </p>
-            </div>
-            <div className="step-card">
-              <div className="step-card__num">5</div>
-              <h3 className="step-card__title">Intent Validation</h3>
-              <p className="step-card__desc">
-                "Developer intent mentions 'multi-currency support'. The changes align with stated purpose,
-                but breaking changes were acknowledged without migration plan."
-              </p>
-            </div>
-            <div className="step-card">
-              <div className="step-card__num">6</div>
-              <h3 className="step-card__title">Governance Decision</h3>
-              <p className="step-card__desc">
-                "Given 11 breaking changes, HIGH risk score, and policy match on payments system,
-                governance decision: <strong>ESCALATE</strong>. Human authority required."
-              </p>
-            </div>
-          </div>
-          <div className="content-block" style={{ marginTop: '20px' }}>
-            <p>
-              This transparency ensures that every governance decision is <strong>auditable and explainable</strong>—critical
-              for compliance. If Dotto rejects a change, the system is legally unchanged.
-            </p>
-          </div>
-        </section>
+            {/* Enforcement */}
+            <section id="enforcement" className="whitepaper__section whitepaper__section--visible">
+              <h2 className="section__title">Enforcement</h2>
+              <div className="steps-grid">
+                <div className="step-card">
+                  <div
+                    className="step-card__num"
+                    style={{ background: "var(--success)", color: "white" }}
+                  >
+                    0
+                  </div>
+                  <h3 className="step-card__title">Approved</h3>
+                  <p className="step-card__desc">Valid receipt. Deploy.</p>
+                </div>
+                <div className="step-card">
+                  <div
+                    className="step-card__num"
+                    style={{ background: "var(--error)", color: "white" }}
+                  >
+                    1
+                  </div>
+                  <h3 className="step-card__title">Blocked</h3>
+                  <p className="step-card__desc">Blocked receipt. Abort.</p>
+                </div>
+                <div className="step-card">
+                  <div
+                    className="step-card__num"
+                    style={{ background: "var(--warning)", color: "white" }}
+                  >
+                    2
+                  </div>
+                  <h3 className="step-card__title">No Receipt</h3>
+                  <p className="step-card__desc">Missing/invalid. Abort.</p>
+                </div>
+              </div>
+              <div className="rules-example" style={{ marginTop: "16px" }}>
+                <pre>{`dotto enforce --artifacts ./artifacts
+# Exit: 0=deploy, 1=blocked, 2=no-receipt`}</pre>
+              </div>
+              <EnforcementDemo />
+            </section>
 
-        {/* Human Override */}
-        <section className="whitepaper__section">
-          <h2 className="section__title">Human Authority</h2>
-          <div className="content-block">
-            <p>
-              <strong>Governance without human authority is invalid.</strong> After Gemini issues a governance
-              decision, humans exercise final authority:
-            </p>
-          </div>
-          <div className="steps-grid" style={{ marginTop: '20px' }}>
-            <div className="step-card">
-              <div className="step-card__num">✓</div>
-              <h3 className="step-card__title">Accept Decision</h3>
-              <p className="step-card__desc">
-                Agree with the governance decision. This creates binding precedent
-                and reinforces similar future judgments.
+            {/* Human Authority */}
+            <section
+              id="human-authority"
+              className="whitepaper__section whitepaper__section--visible"
+            >
+              <h2 className="section__title">Human Authority</h2>
+              <div className="steps-grid steps-grid--4col" style={{ marginTop: "20px" }}>
+                <div className="step-card step-card--approve">
+                  <div className="step-card__num">✓</div>
+                  <h3 className="step-card__title">Approve</h3>
+                  <p className="step-card__desc">Creates receipt + precedent</p>
+                </div>
+                <div className="step-card step-card--reject">
+                  <div className="step-card__num">✕</div>
+                  <h3 className="step-card__title">Reject</h3>
+                  <p className="step-card__desc">Creates rejection record</p>
+                </div>
+                <div className="step-card step-card--defer">
+                  <div className="step-card__num">⏸</div>
+                  <h3 className="step-card__title">Defer</h3>
+                  <p className="step-card__desc">Blocks without precedent</p>
+                </div>
+              </div>
+            </section>
+
+            {/* Precedent */}
+            <section
+              id="precedent"
+              className="whitepaper__section whitepaper__section--visible whitepaper__section--alt"
+            >
+              <h2 className="section__title">Precedent</h2>
+              <div className="content-block">
+                <p>
+                  Every authorization becomes{" "}
+                  <Jargon definition="A past decision that automatically applies to similar future changes.">
+                    <strong>binding precedent</strong>
+                  </Jargon>
+                  .
+                </p>
+                <p>
+                  Matching changes are{" "}
+                  <Jargon definition="Changes similar enough to a past approval are automatically authorized without human review.">
+                    <strong>auto-authorized</strong>
+                  </Jargon>
+                  .
+                </p>
+              </div>
+              <div className="past-decisions">
+                <h4 className="past-decisions__title">Recent Decisions</h4>
+                <div className="past-decision">
+                  <div className="past-decision__header">
+                    <span className="past-decision__badge past-decision__badge--approved">
+                      Approved
+                    </span>
+                    <span className="past-decision__date">Jan 28, 2025</span>
+                  </div>
+                  <div className="past-decision__change">
+                    <code>UserSchema</code> → renamed <code>email</code> to{" "}
+                    <code>emailAddress</code>
+                  </div>
+                  <div className="past-decision__meta">
+                    <span className="past-decision__author">natalie@company.com</span>
+                    <span className="past-decision__similarity">Auto-authorizes 72% similar</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Precedent Matching */}
+            <section
+              id="precedent-matching"
+              className="whitepaper__section whitepaper__section--visible"
+            >
+              <h2 className="section__title">Precedent Matching</h2>
+              <p className="section__preface">
+                Humans authorize patterns. The system enforces similarity.
               </p>
-            </div>
-            <div className="step-card">
-              <div className="step-card__num">→</div>
-              <h3 className="step-card__title">Override → Approve</h3>
-              <p className="step-card__desc">
-                Override a block or escalation to approve. This override becomes binding precedent—future
-                governance decisions will reference this ruling.
-              </p>
-            </div>
-            <div className="step-card">
-              <div className="step-card__num">✕</div>
-              <h3 className="step-card__title">Override → Block</h3>
-              <p className="step-card__desc">
-                Override an approval to block. This override becomes binding precedent—future
-                governance decisions will be more cautious about similar patterns.
-              </p>
-            </div>
-          </div>
-          <div className="content-block" style={{ marginTop: '20px' }}>
-            <p>
-              <strong>Every override becomes binding precedent for future governance decisions.</strong> These
-              decisions are stored in <code>decisions.json</code> and inform all subsequent judgments.
-            </p>
-          </div>
-        </section>
+              <div className="content-block" style={{ marginBottom: "20px" }}>
+                <p>
+                  Changes become <strong>drift vectors</strong>. Similarity above{" "}
+                  <strong>60%</strong> = auto-authorized.
+                </p>
+                <p style={{ marginTop: "16px", fontSize: "13px", color: "var(--text-muted)" }}>
+                  Deterministic. Explainable. Auditable. No embeddings.
+                </p>
+              </div>
+              <SimilarityCalculator />
+            </section>
 
-        {/* The Learning Loop */}
-        <section className="whitepaper__section">
-          <h2 className="section__title">The Learning Loop</h2>
-          <div className="content-block">
-            <p>
-              This isn't logging—it's <strong>precedent</strong>. Every human decision becomes binding
-              context that Gemini reasons from on subsequent governance decisions.
-            </p>
-          </div>
-
-          <div className="learning-loop" style={{ marginTop: '24px' }}>
-            <div className="loop-step">
-              <div className="loop-step__num">1</div>
-              <div className="loop-step__content">
-                <h4>Run Pipeline</h4>
-                <p>Gemini receives: <code>artifacts</code> + <code>policy</code> + <code>decisions.json</code> (memory)</p>
+            {/* Closing - Technical */}
+            <section className="whitepaper__section whitepaper__section--closing whitepaper__section--visible">
+              <div className="cta-section">
+                <h2 className="cta-section__title">Every change. Every time. No exceptions.</h2>
+                <p className="cta-section__subtitle">
+                  Every ruling is auditable. Every precedent is binding.
+                </p>
+                <button className="cta-btn">
+                  <span className="cta-btn__icon">▶</span>
+                  Run Governance
+                </button>
               </div>
-            </div>
-            <div className="loop-arrow">↓</div>
-            <div className="loop-step">
-              <div className="loop-step__num">2</div>
-              <div className="loop-step__content">
-                <h4>Gemini Reasons from Precedent</h4>
-                <p>"Similar payment schema change was approved on Jan 15 after migration plan attached. Checking if current change has migration plan..."</p>
-              </div>
-            </div>
-            <div className="loop-arrow">↓</div>
-            <div className="loop-step">
-              <div className="loop-step__num">3</div>
-              <div className="loop-step__content">
-                <h4>Human Provides Feedback</h4>
-                <p>Accept ✓ or Override →/✕ with optional notes explaining the decision</p>
-              </div>
-            </div>
-            <div className="loop-arrow">↓</div>
-            <div className="loop-step loop-step--highlight">
-              <div className="loop-step__num">4</div>
-              <div className="loop-step__content">
-                <h4>Memory Updated</h4>
-                <p>Decision + human feedback + context stored in <code>decisions.json</code></p>
-              </div>
-            </div>
-            <div className="loop-arrow loop-arrow--return">↺ Next run includes updated memory</div>
-          </div>
-
-          <div className="content-block" style={{ marginTop: '24px' }}>
-            <p>
-              <strong>Example:</strong> If humans consistently override BLOCK decisions on
-              optional field additions, this precedent establishes that your organization treats
-              these as low-risk. Future governance decisions will reference this pattern.
-            </p>
-          </div>
-        </section>
-
-        {/* Why Gemini 3 */}
-        <section className="whitepaper__section">
-          <h2 className="section__title">Why Gemini 3?</h2>
-          <div className="content-block" style={{ marginBottom: '20px' }}>
-            <p>
-              <strong>Gemini 3 does not analyze code.</strong> Deterministic tools handle that.
-              <strong> Gemini 3 makes governance decisions under uncertainty</strong>—decisions that
-              rule-based systems cannot make safely.
-            </p>
-          </div>
-          <div className="features-grid">
-            <div className="feature">
-              <div className="feature__icon">
-                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <h4>Policy Conflicts</h4>
-              <p>When security rules allow but compliance rules forbid—Gemini weighs tradeoffs and decides</p>
-            </div>
-            <div className="feature">
-              <div className="feature__icon">
-                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h4>Intent Ambiguity</h4>
-              <p>When developer intent is unclear or conflicts with stated goals—Gemini interprets context</p>
-            </div>
-            <div className="feature">
-              <div className="feature__icon">
-                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                </svg>
-              </div>
-              <h4>Precedent Reasoning</h4>
-              <p>When past decisions are ambiguous—Gemini reasons from similar cases in decision history</p>
-            </div>
-            <div className="feature">
-              <div className="feature__icon">
-                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-                </svg>
-              </div>
-              <h4>Risk Tradeoffs</h4>
-              <p>When blast radius vs. velocity requires nuance—Gemini balances competing concerns</p>
-            </div>
-          </div>
-          <div className="content-block" style={{ marginTop: '20px' }}>
-            <p>
-              Rules fail exactly where governance matters most—when policies conflict, intent is ambiguous,
-              and risk must be weighed. <strong>Dotto exists for the decisions deterministic systems cannot make safely.</strong>
-            </p>
-          </div>
-        </section>
-
-        {/* Closing */}
-        <section className="whitepaper__section whitepaper__section--closing">
-          <div className="content-block">
-            <p className="closing-statement">
-              As AI writes more code than humans can safely review, software cannot be governed manually anymore.
-            </p>
-            <p className="closing-statement">
-              Dotto doesn't replace engineers. <strong>It replaces unguarded change.</strong>
-            </p>
-            <p className="closing-statement closing-statement--final">
-              If Dotto rejects a change, the system is legally unchanged.
-            </p>
-          </div>
-        </section>
+            </section>
+          </>
+        )}
 
         {/* Footer */}
         <footer className="whitepaper__footer">
-          <p>Built with Gemini 3 for the Gemini API Developer Competition</p>
+          <p>Built for the Gemini 3 Hackathon</p>
         </footer>
       </div>
     </div>
