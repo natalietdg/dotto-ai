@@ -1263,9 +1263,9 @@
 }
 
 .decision-compact__badge--escalate {
-  background: #fefce8;
-  color: var(--warning);
-  border: 1px solid #fef08a;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
 }
 
 .decision-compact__override {
@@ -1290,18 +1290,18 @@
 }
 
 .decision-compact__risk--low {
-  background: #f0fdf4;
-  color: var(--success);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
 }
 
 .decision-compact__risk--medium {
-  background: #fefce8;
-  color: var(--warning);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
 }
 
 .decision-compact__risk--high {
-  background: #fef2f2;
-  color: var(--error);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
 }
 
 .decision-compact__actions {
@@ -1446,8 +1446,8 @@
 }
 
 [data-theme="dark"] .decision-compact__badge--escalate {
-  background: rgba(245, 158, 11, 0.1);
-  border-color: rgba(245, 158, 11, 0.3);
+  background: var(--bg-tertiary);
+  border-color: var(--border);
 }
 
 [data-theme="dark"] .decision-compact__override {
@@ -1455,15 +1455,15 @@
 }
 
 [data-theme="dark"] .decision-compact__risk--low {
-  background: rgba(34, 197, 94, 0.1);
+  background: var(--bg-tertiary);
 }
 
 [data-theme="dark"] .decision-compact__risk--medium {
-  background: rgba(245, 158, 11, 0.1);
+  background: var(--bg-tertiary);
 }
 
 [data-theme="dark"] .decision-compact__risk--high {
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--bg-tertiary);
 }
 
 /* ===== Policy Conflict / Uncertainty Card ===== */

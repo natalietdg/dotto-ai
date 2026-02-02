@@ -149,7 +149,7 @@ export default function InteractiveDemo() {
 
       {/* The Governance Loop Label */}
       <div className="governance-loop-label">
-        <h2 className="governance-loop-label__title">The Governance Loop</h2>
+        <h2 className="governance-loop-label__title">The Enforced Sequence</h2>
         <p className="governance-loop-label__subtitle">
           What happens every time a change touches production
         </p>

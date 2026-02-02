@@ -190,18 +190,21 @@ function Sidebar({ artifact, onClose, lastUpdate }: SidebarProps) {
           </section>
         )}
 
-        {artifact.certificate?.proof?.transactionId && (
+        {(artifact.certificate?.proof?.link || artifact.certificate?.proof?.transactionId) && (
           <section className="sidebar__section">
             <h3 className="section__title">Verification</h3>
             <div className="field">
               <span className="field__label">Hedera TX</span>
               <a
-                href={`https://hashscan.io/testnet/transaction/${artifact.certificate.proof.transactionId}`}
+                href={
+                  artifact.certificate.proof.link ||
+                  `https://hashscan.io/testnet/transaction/${artifact.certificate.proof.transactionId}`
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className="field__link"
               >
-                {artifact.certificate.proof.transactionId}
+                {artifact.certificate.proof.transactionId?.split("@")[0] || "View on Hashscan"}
                 <svg
                   width="12"
                   height="12"

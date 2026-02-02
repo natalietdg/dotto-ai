@@ -194,10 +194,12 @@ function App() {
         .split(/\n/)
         // Strip bullet points, numbered lists, and leading whitespace
         .map((l) => l.replace(/^[-*•\d.)\s]+/, "").trim())
+        // Strip markdown code `text` FIRST (before bold, to handle nested formatting)
+        .map((l) => l.replace(/`([^`]+)`/g, "$1"))
         // Strip markdown bold **text** and convert to plain text
         .map((l) => l.replace(/\*\*([^*]+)\*\*/g, "$1"))
-        // Strip markdown code `text`
-        .map((l) => l.replace(/`([^`]+)`/g, "$1"))
+        // Clean up any remaining stray ** markers (handles edge cases)
+        .map((l) => l.replace(/\*\*/g, ""))
         // Filter lines: min 5 chars (reduced from 10), max 200 chars, skip headers
         .filter(
           (l) =>
@@ -276,7 +278,7 @@ function App() {
 
     setSubmittingFeedback(true);
     try {
-      await fetch("/feedback", {
+      const response = await fetch("/feedback", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -292,12 +294,27 @@ function App() {
           },
         }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Feedback submission failed: ${response.status}`);
+      }
+
       setHumanFeedback(outcome);
       if (override) setOverrideAction(override);
+
+      // Wait a moment for the server to finish writing, then refresh
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       // Refresh decision history
-      fetchJsonWithFallback(["/memory/decisions.json", "/src/memory/decisions.json"])
-        .then((data) => setDecisionHistory(data.decisions || []))
-        .catch(() => {});
+      try {
+        const data = await fetchJsonWithFallback([
+          "/memory/decisions.json",
+          "/src/memory/decisions.json",
+        ]);
+        setDecisionHistory(data.decisions || []);
+      } catch {
+        // Silent fail on refresh - decision was still recorded
+      }
     } catch (e) {
       console.error("Failed to submit feedback:", e);
     } finally {

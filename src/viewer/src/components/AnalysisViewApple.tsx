@@ -727,8 +727,8 @@ export default function AnalysisViewApple({
               )}
             </span>
             {selectedScenario
-              ? DEMO_SCENARIOS.find((s) => s.id === selectedScenario)?.name || "Select a change"
-              : "Select a change to view"}
+              ? DEMO_SCENARIOS.find((s) => s.id === selectedScenario)?.name || "Load Example Change"
+              : "Load Example Change"}
           </button>
         )}
 

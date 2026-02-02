@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 // Receipt Demo - Scroll-driven receipt construction
 export default function ReceiptDemo() {
   const [step, setStep] = useState(0);
+  const [hasStarted, setHasStarted] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   const receiptSteps = [
@@ -18,29 +19,48 @@ export default function ReceiptDemo() {
 
   useEffect(() => {
     const handleScroll = () => {
-      if (!ref.current) return;
+      if (!ref.current || hasStarted) return;
 
       const rect = ref.current.getBoundingClientRect();
       const windowHeight = window.innerHeight;
 
-      // Calculate how far the element is through the viewport
-      // Start revealing when top of element is 80% down the viewport
-      // Finish when top of element is 20% down the viewport
-      const startPoint = windowHeight * 0.8;
-      const endPoint = windowHeight * 0.2;
-      const scrollRange = startPoint - endPoint;
+      // Check if section is in viewport (at least 20% visible)
+      const isVisible = rect.top < windowHeight * 0.8 && rect.bottom > 0;
 
-      const progress = Math.max(0, Math.min(1, (startPoint - rect.top) / scrollRange));
-      const newStep = Math.floor(progress * (receiptSteps.length + 1));
-
-      setStep(newStep);
+      if (isVisible) {
+        setHasStarted(true);
+      }
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll(); // Initial check
+    // Find the .whitepaper scroll container
+    const scrollContainer = document.querySelector('.whitepaper');
+    if (scrollContainer) {
+      scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
+      handleScroll();
+      return () => scrollContainer.removeEventListener("scroll", handleScroll);
+    } else {
+      // Fallback to window scroll
+      window.addEventListener("scroll", handleScroll, { passive: true });
+      handleScroll();
+      return () => window.removeEventListener("scroll", handleScroll);
+    }
+  }, [hasStarted]);
 
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [receiptSteps.length]);
+  useEffect(() => {
+    if (!hasStarted) return;
+
+    const interval = setInterval(() => {
+      setStep((prev) => {
+        if (prev >= receiptSteps.length) {
+          clearInterval(interval);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 300);
+
+    return () => clearInterval(interval);
+  }, [hasStarted, receiptSteps.length]);
 
   return (
     <div ref={ref} className="receipt-demo">
