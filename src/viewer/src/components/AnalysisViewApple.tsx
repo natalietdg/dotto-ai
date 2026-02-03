@@ -5,6 +5,7 @@ import "./AnalysisViewApple.css";
 import { SyntaxHighlightedJSON } from "./SyntaxHighlightedJSON";
 import { extractIntentsFromContent, analyzeIntentAlignment } from "../utils/intent";
 import { apiUrl } from "../config/api";
+import { buildGraphFromSchemas, SchemaGraph } from "../utils/schemaParser";
 
 // Demo scenarios (Precedent Match removed - should feel earned, not selectable)
 const DEMO_SCENARIOS = [
@@ -122,6 +123,17 @@ interface AnalysisViewProps {
   onDecisionHistoryUpdate?: () => void;
   decisionHistory?: DecisionRecord[];
   onScenarioLoad?: (drifts: ScenarioDrift[]) => void;
+  onGraphUpdate?: (graph: SchemaGraph, drift?: {
+    detected: boolean;
+    changes: Array<{
+      type: string;
+      field: string;
+      from?: string;
+      to?: string;
+      breaking: boolean;
+      schemaName?: string;
+    }>;
+  }) => void;
 }
 
 interface InputArtifacts {
@@ -139,6 +151,7 @@ export default function AnalysisViewApple({
   pipelineState,
   onDecisionHistoryUpdate,
   onScenarioLoad,
+  onGraphUpdate,
 }: AnalysisViewProps) {
   const {
     decision,
@@ -170,9 +183,63 @@ export default function AnalysisViewApple({
   const [afterSchema, setAfterSchema] = useState<string | null>(null);
   const [activeDrift, setActiveDrift] = useState<{
     detected: boolean;
-    changes: Array<{ type: string; field: string; from?: string; to?: string; breaking: boolean }>;
+    changes: Array<{
+      type: string;
+      field: string;
+      from?: string;
+      to?: string;
+      breaking: boolean;
+      schemaName?: string; // The schema/interface name this change belongs to
+    }>;
   } | null>(null);
   const [activeIntent, setActiveIntent] = useState<string[] | null>(null);
+  const [activeGraph, setActiveGraph] = useState<SchemaGraph | null>(null);
+
+  // Derive artifacts from activeGraph when set (for uploads/scenarios)
+  // This allows the "Affected Systems" tab to show uploaded schema nodes
+  const derivedArtifactsList = activeGraph
+    ? Object.values(activeGraph.nodes).map((node) => {
+        // Check if this node has drift (breaking change)
+        // Match by schemaName (for scenarios) or by field name (for uploads)
+        const hasBreaking = activeDrift?.changes.some(
+          (c) =>
+            c.breaking &&
+            (c.schemaName === node.name || // Match by schema name (scenarios)
+              c.field === node.name || // Match by field name
+              node.name.includes(c.field || ""))
+        );
+        const hasChange = activeDrift?.changes.some(
+          (c) =>
+            c.schemaName === node.name || // Match by schema name (scenarios)
+            c.field === node.name || // Match by field name
+            node.name.includes(c.field || "")
+        );
+
+        let status: Artifact["status"] = "verified";
+        if (hasBreaking) status = "drifted";
+        else if (hasChange) status = "changed";
+
+        return {
+          id: node.id,
+          name: node.name,
+          status,
+          file: node.filePath,
+          type: node.type,
+        };
+      })
+    : null;
+
+  // Use derived artifacts when available (upload/scenario), otherwise use props
+  const displayArtifactsList = derivedArtifactsList || artifactsList;
+  const displayStats = derivedArtifactsList
+    ? {
+        total: derivedArtifactsList.length,
+        verified: derivedArtifactsList.filter((a) => a.status === "verified").length,
+        changed: derivedArtifactsList.filter((a) => a.status === "changed").length,
+        impacted: derivedArtifactsList.filter((a) => a.status === "impacted").length,
+        breaking: derivedArtifactsList.filter((a) => a.status === "drifted").length,
+      }
+    : artifacts;
 
   // Simple drift detection from TypeScript interface strings
   const detectDrift = (before: string, after: string) => {
@@ -182,7 +249,16 @@ export default function AnalysisViewApple({
       from?: string;
       to?: string;
       breaking: boolean;
+      schemaName?: string;
     }> = [];
+
+    // Extract schema/interface name from code
+    const extractSchemaName = (code: string): string => {
+      const interfaceMatch = code.match(/(?:interface|type)\s+(\w+)/);
+      return interfaceMatch ? interfaceMatch[1] : "Schema";
+    };
+
+    const schemaName = extractSchemaName(after) || extractSchemaName(before);
 
     // Extract fields from interface-like structures
     const extractFields = (code: string): Map<string, string> => {
@@ -207,6 +283,7 @@ export default function AnalysisViewApple({
           field,
           from: type,
           breaking: true,
+          schemaName,
         });
       }
     });
@@ -222,6 +299,7 @@ export default function AnalysisViewApple({
           field,
           to: newType,
           breaking: !isOptional,
+          schemaName,
         });
       } else if (oldType !== newType) {
         // Type changed - always breaking
@@ -231,6 +309,7 @@ export default function AnalysisViewApple({
           from: oldType,
           to: newType,
           breaking: true,
+          schemaName,
         });
       }
     });
@@ -251,6 +330,7 @@ export default function AnalysisViewApple({
               from: removed.field,
               to: added.field,
               breaking: true,
+              schemaName,
             };
             // Remove the "added" entry since it's now part of rename
             const addedIdx = changes.indexOf(added);
@@ -272,14 +352,31 @@ export default function AnalysisViewApple({
   const handleBeforeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // File size limit (1MB max) to prevent memory exhaustion
+      const MAX_FILE_SIZE = 1024 * 1024;
+      if (file.size > MAX_FILE_SIZE) {
+        alert("File too large. Maximum size is 1MB.");
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (event) => {
         const content = event.target?.result as string;
         setBeforeSchema(content);
-        // If both schemas are present, detect drift
+        // If both schemas are present, detect drift and build graph
         if (afterSchema) {
           const drift = detectDrift(content, afterSchema);
           setActiveDrift(drift);
+          const graph = buildGraphFromSchemas(content, afterSchema, "Uploaded");
+          setActiveGraph(graph);
+          onGraphUpdate?.(graph, drift); // Update App.tsx Graph tab with drift info
+          // Update inputArtifacts with new graph
+          setInputArtifacts((prev) => ({
+            graph: graph,
+            drift: { diffs: drift.changes },
+            intent: prev?.intent || {},
+            decisions: prev?.decisions || { decisions: [] },
+          }));
         }
       };
       reader.readAsText(file);
@@ -290,15 +387,32 @@ export default function AnalysisViewApple({
   const handleAfterUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // File size limit (1MB max) to prevent memory exhaustion
+      const MAX_FILE_SIZE = 1024 * 1024;
+      if (file.size > MAX_FILE_SIZE) {
+        alert("File too large. Maximum size is 1MB.");
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (event) => {
         const content = event.target?.result as string;
         setAfterSchema(content);
         setActiveIntent(extractIntentsFromContent(content));
-        // If both schemas are present, detect drift
+        // If both schemas are present, detect drift and build graph
         if (beforeSchema) {
           const drift = detectDrift(beforeSchema, content);
           setActiveDrift(drift);
+          const graph = buildGraphFromSchemas(beforeSchema, content, "Uploaded");
+          setActiveGraph(graph);
+          onGraphUpdate?.(graph, drift); // Update App.tsx Graph tab with drift info
+          // Update inputArtifacts with new graph
+          setInputArtifacts((prev) => ({
+            graph: graph,
+            drift: { diffs: drift.changes },
+            intent: { intents: extractIntentsFromContent(content) },
+            decisions: prev?.decisions || { decisions: [] },
+          }));
         }
       };
       reader.readAsText(file);
@@ -316,8 +430,15 @@ export default function AnalysisViewApple({
     setOverrideAction(null);
   };
 
-  // Load demo scenario - fetches scenario-specific drift and intent data
+  // Load demo scenario - fetches scenario-specific drift, intent, and schema data
   const loadDemoScenario = async (scenarioId: string) => {
+    // Whitelist validation to prevent path traversal attacks
+    const allowedScenarios = DEMO_SCENARIOS.map((s) => s.id);
+    if (!allowedScenarios.includes(scenarioId)) {
+      console.error("Invalid scenario ID:", scenarioId);
+      return;
+    }
+
     setSelectedScenario(scenarioId);
     setLoadingScenario(true);
 
@@ -327,14 +448,18 @@ export default function AnalysisViewApple({
     setOverrideAction(null);
 
     try {
-      // Load scenario-specific drift and intent files in parallel
-      const [driftResponse, intentResponse] = await Promise.all([
+      // Load scenario-specific files in parallel (drift, intent, before.ts, after.ts)
+      const [driftResponse, intentResponse, beforeResponse, afterResponse] = await Promise.all([
         fetch(apiUrl(`/examples/demo-scenarios/${scenarioId}/drift.json`)),
         fetch(apiUrl(`/examples/demo-scenarios/${scenarioId}/intent.json`)),
+        fetch(apiUrl(`/examples/demo-scenarios/${scenarioId}/before.ts`)),
+        fetch(apiUrl(`/examples/demo-scenarios/${scenarioId}/after.ts`)),
       ]);
 
       let driftData = null;
       let intentData = null;
+      let beforeContent: string | null = null;
+      let afterContent: string | null = null;
 
       if (driftResponse.ok) {
         driftData = await driftResponse.json();
@@ -344,18 +469,29 @@ export default function AnalysisViewApple({
         intentData = await intentResponse.json();
       }
 
-      // Update input artifacts for display (Context tab)
-      setInputArtifacts((prev) =>
-        prev
-          ? {
-              ...prev,
-              drift: driftData || prev.drift,
-              intent: intentData || prev.intent,
-            }
-          : null
-      );
+      if (beforeResponse.ok) {
+        beforeContent = await beforeResponse.text();
+        setBeforeSchema(beforeContent);
+      }
 
-      // Set activeDrift so it gets sent to governance
+      if (afterResponse.ok) {
+        afterContent = await afterResponse.text();
+        setAfterSchema(afterContent);
+      }
+
+      // Set activeDrift first so we can pass it to onGraphUpdate
+      let scenarioDrift: {
+        detected: boolean;
+        changes: Array<{
+          type: string;
+          field: string;
+          from?: string;
+          to?: string;
+          breaking: boolean;
+          schemaName?: string;
+        }>;
+      } | null = null;
+
       if (driftData?.diffs && Array.isArray(driftData.diffs)) {
         // Flatten nested changes from drift structure
         const flatChanges: Array<{
@@ -364,6 +500,7 @@ export default function AnalysisViewApple({
           from?: string;
           to?: string;
           breaking: boolean;
+          schemaName?: string;
         }> = [];
 
         for (const diff of driftData.diffs) {
@@ -375,6 +512,7 @@ export default function AnalysisViewApple({
                 from: change.oldType || change.oldField,
                 to: change.newType || change.newField,
                 breaking: diff.breaking ?? true,
+                schemaName: diff.name, // Include schema name for matching
               });
             }
           } else {
@@ -385,20 +523,39 @@ export default function AnalysisViewApple({
               from: diff.from || diff.oldType,
               to: diff.to || diff.newType,
               breaking: diff.breaking ?? true,
+              schemaName: diff.name, // Include schema name for matching
             });
           }
         }
 
-        setActiveDrift({
+        scenarioDrift = {
           detected: flatChanges.length > 0,
           changes: flatChanges,
-        });
+        };
+
+        setActiveDrift(scenarioDrift);
 
         // Notify parent to update graph and stats
         if (onScenarioLoad && driftData.diffs) {
           onScenarioLoad(driftData.diffs);
         }
       }
+
+      // Build graph from before/after schemas and pass drift info
+      let scenarioGraph: SchemaGraph | null = null;
+      if (beforeContent || afterContent) {
+        scenarioGraph = buildGraphFromSchemas(beforeContent, afterContent, scenarioId);
+        setActiveGraph(scenarioGraph);
+        onGraphUpdate?.(scenarioGraph, scenarioDrift || undefined); // Update App.tsx Graph tab with drift
+      }
+
+      // Update input artifacts for display (Context tab)
+      setInputArtifacts((prev) => ({
+        graph: scenarioGraph || prev?.graph || { nodes: {}, edges: [] },
+        drift: driftData || prev?.drift || { diffs: [] },
+        intent: intentData || prev?.intent || {},
+        decisions: prev?.decisions || { decisions: [] },
+      }));
 
       // Set activeIntent so it gets sent to governance
       // Intent files have title, description, justification fields
@@ -1051,17 +1208,17 @@ export default function AnalysisViewApple({
           {/* Quick stats */}
           <div className="status-hero__stats">
             <div className="quick-stat">
-              <span className="quick-stat__value">{artifacts.breaking}</span>
+              <span className="quick-stat__value">{displayStats.breaking}</span>
               <span className="quick-stat__label">Breaking</span>
             </div>
             <div className="quick-stat__divider" />
             <div className="quick-stat">
-              <span className="quick-stat__value">{artifacts.impacted}</span>
+              <span className="quick-stat__value">{displayStats.impacted}</span>
               <span className="quick-stat__label">Impacted</span>
             </div>
             <div className="quick-stat__divider" />
             <div className="quick-stat">
-              <span className="quick-stat__value">{artifacts.total}</span>
+              <span className="quick-stat__value">{displayStats.total}</span>
               <span className="quick-stat__label">Total</span>
             </div>
           </div>
@@ -1088,7 +1245,9 @@ export default function AnalysisViewApple({
           onClick={() => setActiveTab("systems")}
         >
           Affected Systems
-          {artifacts.breaking > 0 && <span className="pill-tab__badge">{artifacts.breaking}</span>}
+          {displayStats.breaking > 0 && (
+            <span className="pill-tab__badge">{displayStats.breaking}</span>
+          )}
         </button>
       </nav>
 
@@ -1269,9 +1428,9 @@ export default function AnalysisViewApple({
 
         {activeTab === "systems" && (
           <div className="tab-panel tab-panel--systems">
-            {artifactsList.length > 0 ? (
+            {displayArtifactsList.length > 0 ? (
               <div className="systems-grid">
-                {artifactsList.map((artifact) => (
+                {displayArtifactsList.map((artifact) => (
                   <div
                     key={artifact.id}
                     className={`system-card system-card--${artifact.status === "drifted" ? "breaking" : artifact.status}`}

@@ -27,6 +27,7 @@ import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { EmptyState } from "./components/EmptyState";
 import { Breadcrumbs, getBreadcrumbs } from "./components/Breadcrumbs";
 import { apiUrl } from "./config/api";
+import { SchemaGraph } from "./utils/schemaParser";
 
 type ViewType = "analysis" | "graph" | "history" | "whitepaper";
 
@@ -673,6 +674,91 @@ function App() {
     [artifacts]
   );
 
+  // Handle graph updates from uploaded schemas
+  const handleGraphUpdate = useCallback((graph: SchemaGraph, drift?: {
+    detected: boolean;
+    changes: Array<{
+      type: string;
+      field: string;
+      from?: string;
+      to?: string;
+      breaking: boolean;
+      schemaName?: string;
+    }>;
+  }) => {
+    // Build a map of which nodes depend on each node (incoming edges)
+    const incomingEdges = new Map<string, string[]>();
+    graph.edges.forEach((edge) => {
+      // For the graph visualization, we need to know what depends on this node
+      // edge.source depends on edge.target
+      if (!incomingEdges.has(edge.target)) {
+        incomingEdges.set(edge.target, []);
+      }
+      incomingEdges.get(edge.target)!.push(edge.source);
+    });
+
+    // Build a map of schema names to their drift status
+    const schemaBreakingMap = new Map<string, boolean>();
+    const schemaChangedMap = new Map<string, boolean>();
+    
+    if (drift?.changes) {
+      drift.changes.forEach((change) => {
+        if (change.schemaName) {
+          if (change.breaking) {
+            schemaBreakingMap.set(change.schemaName, true);
+          } else {
+            schemaChangedMap.set(change.schemaName, true);
+          }
+        }
+      });
+    }
+
+    // Convert SchemaGraph to artifacts for display
+    const newArtifacts: Artifact[] = Object.values(graph.nodes).map((node) => {
+      // Determine status based on drift
+      let status: Artifact["status"] = "verified";
+      if (schemaBreakingMap.has(node.name)) {
+        status = "drifted";
+      } else if (schemaChangedMap.has(node.name)) {
+        status = "changed";
+      }
+
+      // Find all changes for this schema
+      const schemaChanges = drift?.changes.filter(c => c.schemaName === node.name) || [];
+      
+      return {
+        id: node.id,
+        name: node.name,
+        status,
+        dependencies: incomingEdges.get(node.id) || [],
+        hash: "",
+        file: node.filePath,
+        lastModified: new Date().toISOString(),
+        metadata: schemaChanges.length > 0 ? {
+          breaking: status === "drifted",
+          drift: {
+            nodeId: node.id,
+            name: node.name,
+            type: "schema",
+            changeType: (status === "drifted" || status === "changed") ? "modified" : "unchanged",
+            breaking: status === "drifted",
+            changes: schemaChanges.map(c => ({
+              type: "field_type_changed" as const,
+              path: c.field,
+              oldValue: c.from,
+              newValue: c.to,
+              breaking: c.breaking,
+              description: `${c.type} on ${c.field}${c.from ? ` (${c.from} → ${c.to})` : ''}`,
+            })),
+          },
+        } : {},
+      };
+    });
+
+    setArtifacts(newArtifacts);
+    setLastUpdate(new Date());
+  }, []);
+
   // Handle scenario drift updates from AnalysisView
   const handleScenarioLoad = useCallback(
     (
@@ -1047,6 +1133,7 @@ function App() {
               .catch(() => {});
           }}
           onScenarioLoad={handleScenarioLoad}
+          onGraphUpdate={handleGraphUpdate}
         />
       </div>
 
