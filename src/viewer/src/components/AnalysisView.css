@@ -1388,7 +1388,7 @@
   color: var(--text-muted);
 }
 
-/* Awaiting Governance State - neutral with red icon */
+/* Production Locked State - neutral with red icon */
 .decision-compact--awaiting {
   padding: 24px 16px;
   background: var(--bg-tertiary);

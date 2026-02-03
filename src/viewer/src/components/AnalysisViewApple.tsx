@@ -580,8 +580,8 @@ export default function AnalysisViewApple({
     if (!decision) {
       return {
         status: "pending",
-        label: "Awaiting Governance",
-        description: "Select a change and run governance to analyze",
+        label: "Production Locked",
+        description: "Awaiting governance decision",
         color: "neutral",
       };
     }
@@ -972,14 +972,8 @@ export default function AnalysisViewApple({
             {statusConfig.status === "pending" && (
               <div className="status-hero__icon status-hero__icon--pending">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeDasharray="4 4"
-                  />
+                  <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="2"/>
+                  <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
               </div>
             )}
