@@ -217,6 +217,18 @@ async function startServer(): Promise<void> {
   }
 
   const server = http.createServer(async (req: http.IncomingMessage, res: http.ServerResponse) => {
+    // CORS headers for cross-domain requests (Netlify frontend -> Render backend)
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+    // Handle preflight requests
+    if (req.method === "OPTIONS") {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
     try {
       const parsedUrl = req.url
         ? new URL(req.url, `http://${req.headers.host ?? "localhost"}`)
@@ -268,11 +280,11 @@ async function startServer(): Promise<void> {
         return;
       }
 
-      // Serve demo scenario files from examples/demo-scenarios/
-      if (req.method === "GET" && pathname.startsWith("/examples/demo-scenarios/")) {
+      // Serve all files from examples/ folder (demo scenarios, base artifacts, etc.)
+      if (req.method === "GET" && pathname.startsWith("/examples/")) {
         let rel: string;
         try {
-          rel = decodeURIComponent(pathname.replace("/examples/demo-scenarios/", ""));
+          rel = decodeURIComponent(pathname.replace("/examples/", ""));
         } catch {
           res.writeHead(400, { "content-type": "application/json" });
           res.end(JSON.stringify({ error: "invalid_request" }));
@@ -285,7 +297,7 @@ async function startServer(): Promise<void> {
           return;
         }
 
-        const examplesRoot = path.resolve("examples/demo-scenarios");
+        const examplesRoot = path.resolve("examples");
         const filePath = path.resolve(examplesRoot, rel);
         if (!filePath.startsWith(examplesRoot + path.sep) && filePath !== examplesRoot) {
           res.writeHead(400, { "content-type": "application/json" });
