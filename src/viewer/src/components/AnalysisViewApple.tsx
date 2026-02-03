@@ -4,6 +4,7 @@ import PipelinePanel, { GovernorDecision } from "./PipelinePanel";
 import "./AnalysisViewApple.css";
 import { SyntaxHighlightedJSON } from "./SyntaxHighlightedJSON";
 import { extractIntentsFromContent, analyzeIntentAlignment } from "../utils/intent";
+import { apiUrl } from "../config/api";
 
 // Demo scenarios (Precedent Match removed - should feel earned, not selectable)
 const DEMO_SCENARIOS = [
@@ -328,8 +329,8 @@ export default function AnalysisViewApple({
     try {
       // Load scenario-specific drift and intent files in parallel
       const [driftResponse, intentResponse] = await Promise.all([
-        fetch(`/examples/demo-scenarios/${scenarioId}/drift.json`),
-        fetch(`/examples/demo-scenarios/${scenarioId}/intent.json`),
+        fetch(apiUrl(`/examples/demo-scenarios/${scenarioId}/drift.json`)),
+        fetch(apiUrl(`/examples/demo-scenarios/${scenarioId}/intent.json`)),
       ]);
 
       let driftData = null;
@@ -972,8 +973,21 @@ export default function AnalysisViewApple({
             {statusConfig.status === "pending" && (
               <div className="status-hero__icon status-hero__icon--pending">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                  <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="2"/>
-                  <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <rect
+                    x="5"
+                    y="11"
+                    width="14"
+                    height="10"
+                    rx="2"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M8 11V7a4 4 0 0 1 8 0v4"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
                 </svg>
               </div>
             )}
