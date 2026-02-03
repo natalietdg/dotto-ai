@@ -428,17 +428,21 @@ export default function AnalysisViewApple({
     const fetchInputs = async () => {
       try {
         const [graphRes, driftRes, intentRes, decisionsRes] = await Promise.all([
-          fetch("/artifacts/graph.json").then((r) => (r.ok ? r.json() : { nodes: {}, edges: {} })),
-          fetch("/artifacts/drift.json").then((r) => (r.ok ? r.json() : { diffs: [] })),
-          fetch("/artifacts/intent.json").then((r) => (r.ok ? r.json() : {})),
-          fetch("/memory/decisions.json").then((r) => (r.ok ? r.json() : { decisions: [] })),
+          fetch(apiUrl("/artifacts/graph.json")).then((r) =>
+            r.ok ? r.json() : { nodes: {}, edges: {} }
+          ),
+          fetch(apiUrl("/artifacts/drift.json")).then((r) => (r.ok ? r.json() : { diffs: [] })),
+          fetch(apiUrl("/artifacts/intent.json")).then((r) => (r.ok ? r.json() : {})),
+          fetch(apiUrl("/memory/decisions.json")).then((r) =>
+            r.ok ? r.json() : { decisions: [] }
+          ),
         ]);
 
         // If backend drift has no diffs, try static demo data
         let finalDrift = driftRes;
         if (!driftRes.diffs || driftRes.diffs.length === 0) {
           try {
-            const demoDrift = await fetch("/drift.json").then((r) =>
+            const demoDrift = await fetch(apiUrl("/drift.json")).then((r) =>
               r.ok ? r.json() : { diffs: [] }
             );
             if (demoDrift.diffs && demoDrift.diffs.length > 0) {

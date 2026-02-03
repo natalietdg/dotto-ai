@@ -381,7 +381,7 @@ async function startServer(): Promise<void> {
         return;
       }
 
-      if(req.method === 'GET' && req.url === "/health") {
+      if (req.method === "GET" && req.url === "/health") {
         return { health: true, message: "OK" };
       }
 
