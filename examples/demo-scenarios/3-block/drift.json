@@ -1,0 +1,65 @@
+{
+  "timestamp": "2026-02-01T16:11:50.149Z",
+  "baseFile": "artifacts/scenarios/3-block/before.ts",
+  "headFile": "artifacts/scenarios/3-block/after.ts",
+  "diffs": [
+    {
+      "nodeId": "after.ts:Payment",
+      "name": "Payment",
+      "type": "schema",
+      "changeType": "modified",
+      "breaking": true,
+      "changes": [
+        {
+          "type": "field_removed",
+          "field": "transactionId",
+          "description": "Field \"transactionId\" was removed"
+        },
+        {
+          "type": "field_renamed",
+          "oldField": "amount",
+          "newField": "totalAmount",
+          "description": "Field \"amount\" renamed to \"totalAmount\""
+        }
+      ],
+      "file": "after.ts"
+    },
+    {
+      "nodeId": "after.ts:Transaction",
+      "name": "Transaction",
+      "type": "schema",
+      "changeType": "modified",
+      "breaking": true,
+      "changes": [
+        {
+          "type": "field_type_changed",
+          "field": "timestamp",
+          "oldType": "Date",
+          "newType": "string",
+          "description": "Field \"timestamp\" type changed from \"Date\" to \"string\""
+        }
+      ],
+      "file": "after.ts"
+    },
+    {
+      "nodeId": "after.ts:Order",
+      "name": "Order",
+      "type": "schema",
+      "changeType": "modified",
+      "breaking": true,
+      "changes": [
+        {
+          "type": "field_removed",
+          "field": "paymentId",
+          "description": "Field \"paymentId\" was removed"
+        }
+      ],
+      "file": "after.ts"
+    }
+  ],
+  "summary": {
+    "totalChanges": 3,
+    "breakingChanges": 3,
+    "nonBreakingChanges": 0
+  }
+}

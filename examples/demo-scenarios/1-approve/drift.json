@@ -1,0 +1,42 @@
+{
+  "timestamp": "2026-02-01T16:11:48.907Z",
+  "baseFile": "artifacts/scenarios/1-approve/before.ts",
+  "headFile": "artifacts/scenarios/1-approve/after.ts",
+  "diffs": [
+    {
+      "nodeId": "after.ts:UserPreferences",
+      "name": "UserPreferences",
+      "type": "schema",
+      "changeType": "added",
+      "breaking": false,
+      "changes": [
+        {
+          "type": "interface_added",
+          "description": "Interface \"UserPreferences\" was added"
+        }
+      ],
+      "file": "after.ts"
+    },
+    {
+      "nodeId": "after.ts:User",
+      "name": "User",
+      "type": "schema",
+      "changeType": "modified",
+      "breaking": false,
+      "changes": [
+        {
+          "type": "field_added",
+          "field": "preferences",
+          "newType": "UserPreferences",
+          "description": "Field \"preferences\" was added (optional)"
+        }
+      ],
+      "file": "after.ts"
+    }
+  ],
+  "summary": {
+    "totalChanges": 2,
+    "breakingChanges": 0,
+    "nonBreakingChanges": 2
+  }
+}

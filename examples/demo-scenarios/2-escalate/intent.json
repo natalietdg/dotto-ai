@@ -1,0 +1,11 @@
+{
+  "change_id": "demo-breaking-change-002",
+  "author": "demo@example.com",
+  "timestamp": "2026-01-26T10:15:00Z",
+  "title": "Refactor payment schema types",
+  "description": "Changing amount from number to PaymentAmount object and status from string to enum for better type safety.",
+  "justification": "Technical debt reduction - moving to stronger typing to prevent runtime errors in payment processing.",
+  "risk_acknowledgment": "Breaking change affecting payment consumers. Coordinated rollout required.",
+  "affected_teams": ["payments", "billing", "checkout", "mobile-app"],
+  "migration_plan": "Will provide SDK update and 2-week deprecation window for old types."
+}

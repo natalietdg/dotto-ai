@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-02-01T16:11:50.841Z",
+  "baseFile": "artifacts/scenarios/4-auto-authorize/before.ts",
+  "headFile": "artifacts/scenarios/4-auto-authorize/after.ts",
+  "diffs": [
+    {
+      "nodeId": "after.ts:Payment",
+      "name": "Payment",
+      "type": "schema",
+      "changeType": "modified",
+      "breaking": false,
+      "changes": [
+        {
+          "type": "field_added",
+          "field": "metadata",
+          "newType": "Record<string, string>",
+          "description": "Field \"metadata\" was added (optional)"
+        }
+      ],
+      "file": "after.ts"
+    }
+  ],
+  "summary": {
+    "totalChanges": 1,
+    "breakingChanges": 0,
+    "nonBreakingChanges": 1
+  }
+}

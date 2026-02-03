@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-02-01T16:11:51.509Z",
+  "baseFile": "artifacts/scenarios/5-intent-present/before.ts",
+  "headFile": "artifacts/scenarios/5-intent-present/after.ts",
+  "diffs": [
+    {
+      "nodeId": "after.ts:User",
+      "name": "User",
+      "type": "schema",
+      "changeType": "modified",
+      "breaking": false,
+      "changes": [
+        {
+          "type": "field_added",
+          "field": "lastLoginAt",
+          "newType": "Date",
+          "description": "Field \"lastLoginAt\" was added (optional)"
+        }
+      ],
+      "file": "after.ts"
+    }
+  ],
+  "summary": {
+    "totalChanges": 1,
+    "breakingChanges": 0,
+    "nonBreakingChanges": 1
+  }
+}

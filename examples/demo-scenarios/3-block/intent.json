@@ -1,0 +1,11 @@
+{
+  "change_id": "demo-high-risk-003",
+  "author": "demo@example.com",
+  "timestamp": "2026-01-26T10:30:00Z",
+  "title": "Remove deprecated payment fields",
+  "description": "Removing legacy fields and renaming identifiers in Payment and Order schemas.",
+  "justification": "Cleanup of deprecated fields that are no longer used according to analytics.",
+  "risk_acknowledgment": "High risk - field removals in critical payment path. Need to verify no consumers remain.",
+  "affected_teams": ["payments", "orders", "analytics", "data-warehouse"],
+  "migration_plan": "None provided - assuming fields are unused."
+}

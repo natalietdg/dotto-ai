@@ -1,0 +1,11 @@
+{
+  "change_id": "demo-precedent-004",
+  "author": "demo@example.com",
+  "timestamp": "2026-01-26T10:45:00Z",
+  "title": "Add metadata field to Payment",
+  "description": "Adding optional metadata field to Payment schema for extensibility.",
+  "justification": "Enables downstream teams to attach custom key-value data without schema changes.",
+  "risk_acknowledgment": "Low risk - optional field, similar to previously approved User.metadata change.",
+  "affected_teams": ["payments"],
+  "notes": "This change is similar to the User.metadata addition approved last month (85% similarity match)."
+}

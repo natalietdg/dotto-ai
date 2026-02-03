@@ -1,0 +1,12 @@
+{
+  "title": "Add login tracking timestamp",
+  "description": "Adding optional lastLoginAt field to User schema to support analytics dashboard feature. This is a non-breaking addition.",
+  "justification": "Product requirement for user activity insights. No existing consumers affected as field is optional.",
+  "intents": [
+    "Add optional lastLoginAt timestamp field to User schema",
+    "Support analytics dashboard feature request",
+    "Non-breaking change - field is optional with no default required"
+  ],
+  "author": "developer@example.com",
+  "ticket": "FEAT-1234"
+}

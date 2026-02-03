@@ -1,0 +1,50 @@
+{
+  "timestamp": "2026-02-01T16:11:49.500Z",
+  "baseFile": "artifacts/scenarios/2-escalate/before.ts",
+  "headFile": "artifacts/scenarios/2-escalate/after.ts",
+  "diffs": [
+    {
+      "nodeId": "after.ts:PaymentAmount",
+      "name": "PaymentAmount",
+      "type": "schema",
+      "changeType": "added",
+      "breaking": false,
+      "changes": [
+        {
+          "type": "interface_added",
+          "description": "Interface \"PaymentAmount\" was added"
+        }
+      ],
+      "file": "after.ts"
+    },
+    {
+      "nodeId": "after.ts:Payment",
+      "name": "Payment",
+      "type": "schema",
+      "changeType": "modified",
+      "breaking": true,
+      "changes": [
+        {
+          "type": "field_type_changed",
+          "field": "amount",
+          "oldType": "number",
+          "newType": "PaymentAmount",
+          "description": "Field \"amount\" type changed from \"number\" to \"PaymentAmount\""
+        },
+        {
+          "type": "field_type_changed",
+          "field": "status",
+          "oldType": "string",
+          "newType": "PaymentStatus",
+          "description": "Field \"status\" type changed from \"string\" to \"PaymentStatus\""
+        }
+      ],
+      "file": "after.ts"
+    }
+  ],
+  "summary": {
+    "totalChanges": 2,
+    "breakingChanges": 1,
+    "nonBreakingChanges": 1
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "change_id": "demo-safe-change-001",
+  "author": "demo@example.com",
+  "timestamp": "2026-01-26T10:00:00Z",
+  "title": "Add user preferences field",
+  "description": "Adding optional preferences field to User schema to support personalization features. This is a non-breaking, additive change.",
+  "justification": "Product requirement for Q1 personalization initiative. Field is optional so existing consumers are unaffected.",
+  "risk_acknowledgment": "Low risk - optional field addition with no impact on existing integrations.",
+  "affected_teams": ["user-service", "frontend"]
+}
