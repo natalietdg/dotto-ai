@@ -468,7 +468,8 @@ function App() {
 
       breakingNodeIds.forEach((nodeId) => findUpstream(nodeId));
 
-      const response = await fetch(apiUrl("/driftpack.json"));
+      // driftpack.json is a static demo file in public/, served by frontend
+      const response = await fetch("/driftpack.json");
       const certificate = response.ok ? await response.json() : null;
 
       const artifactList: Artifact[] = nodesArray.map((node: any) => {
