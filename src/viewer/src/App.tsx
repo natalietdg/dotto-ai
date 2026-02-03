@@ -350,7 +350,7 @@ function App() {
     let lastErr: unknown;
     for (const p of paths) {
       try {
-        const res = await fetch(p);
+        const res = await fetch(apiUrl(p));
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return await res.json();
       } catch (e) {

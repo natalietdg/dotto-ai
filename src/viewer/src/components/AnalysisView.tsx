@@ -265,10 +265,14 @@ export default function AnalysisView({
     const fetchInputs = async () => {
       try {
         const [graphRes, driftRes, intentRes, decisionsRes] = await Promise.all([
-          fetch(apiUrl("/artifacts/graph.json")).then((r) => (r.ok ? r.json() : { nodes: {}, edges: {} })),
+          fetch(apiUrl("/artifacts/graph.json")).then((r) =>
+            r.ok ? r.json() : { nodes: {}, edges: {} }
+          ),
           fetch(apiUrl("/artifacts/drift.json")).then((r) => (r.ok ? r.json() : { diffs: [] })),
           fetch(apiUrl("/artifacts/intent.json")).then((r) => (r.ok ? r.json() : {})),
-          fetch(apiUrl("/memory/decisions.json")).then((r) => (r.ok ? r.json() : { decisions: [] })),
+          fetch(apiUrl("/memory/decisions.json")).then((r) =>
+            r.ok ? r.json() : { decisions: [] }
+          ),
         ]);
         setInputArtifacts({
           graph: graphRes,
