@@ -497,7 +497,7 @@ export default function AnalysisViewApple({
           }
         : inputArtifacts?.drift;
 
-      await fetch("/feedback", {
+      await fetch(apiUrl("/feedback"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

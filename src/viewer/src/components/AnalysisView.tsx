@@ -7,6 +7,7 @@ import { SearchFilterBar, FilterStatus } from "./SearchFilter";
 import { SyntaxHighlightedJSON } from "./SyntaxHighlightedJSON";
 import { ExportMenu } from "./ExportMenu";
 import { ExportData } from "../utils/exportUtils";
+import { apiUrl } from "../config/api";
 
 interface Artifact {
   id: string;
@@ -264,10 +265,10 @@ export default function AnalysisView({
     const fetchInputs = async () => {
       try {
         const [graphRes, driftRes, intentRes, decisionsRes] = await Promise.all([
-          fetch("/artifacts/graph.json").then((r) => (r.ok ? r.json() : { nodes: {}, edges: {} })),
-          fetch("/artifacts/drift.json").then((r) => (r.ok ? r.json() : { diffs: [] })),
-          fetch("/artifacts/intent.json").then((r) => (r.ok ? r.json() : {})),
-          fetch("/memory/decisions.json").then((r) => (r.ok ? r.json() : { decisions: [] })),
+          fetch(apiUrl("/artifacts/graph.json")).then((r) => (r.ok ? r.json() : { nodes: {}, edges: {} })),
+          fetch(apiUrl("/artifacts/drift.json")).then((r) => (r.ok ? r.json() : { diffs: [] })),
+          fetch(apiUrl("/artifacts/intent.json")).then((r) => (r.ok ? r.json() : {})),
+          fetch(apiUrl("/memory/decisions.json")).then((r) => (r.ok ? r.json() : { decisions: [] })),
         ]);
         setInputArtifacts({
           graph: graphRes,
@@ -304,7 +305,7 @@ export default function AnalysisView({
   useEffect(() => {
     const checkEnforcement = async () => {
       try {
-        const response = await fetch("/artifacts/authorization-receipt.json");
+        const response = await fetch(apiUrl("/artifacts/authorization-receipt.json"));
         if (response.ok) {
           const receipt = await response.json();
           // Valid receipt exists
@@ -382,7 +383,7 @@ export default function AnalysisView({
 
     setSubmittingFeedback(true);
     try {
-      await fetch("/feedback", {
+      await fetch(apiUrl("/feedback"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

@@ -26,6 +26,7 @@ import { KeyboardShortcutsModal } from "./components/KeyboardShortcutsModal";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { EmptyState } from "./components/EmptyState";
 import { Breadcrumbs, getBreadcrumbs } from "./components/Breadcrumbs";
+import { apiUrl } from "./config/api";
 
 type ViewType = "analysis" | "graph" | "history" | "whitepaper";
 
@@ -280,7 +281,7 @@ function App() {
 
     setSubmittingFeedback(true);
     try {
-      const response = await fetch("/feedback", {
+      const response = await fetch(apiUrl("/feedback"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -467,7 +468,7 @@ function App() {
 
       breakingNodeIds.forEach((nodeId) => findUpstream(nodeId));
 
-      const response = await fetch("/driftpack.json");
+      const response = await fetch(apiUrl("/driftpack.json"));
       const certificate = response.ok ? await response.json() : null;
 
       const artifactList: Artifact[] = nodesArray.map((node: any) => {

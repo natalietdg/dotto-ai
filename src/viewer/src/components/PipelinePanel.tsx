@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Tooltip } from "./Tooltip";
 import { LoadingSpinner } from "./LoadingSpinner";
+import { apiUrl } from "../config/api";
 
 type AuthorizationReceipt = {
   version: string;
@@ -47,7 +48,7 @@ type Step = {
 };
 
 async function postJson<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, {
+  const res = await fetch(apiUrl(url), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
