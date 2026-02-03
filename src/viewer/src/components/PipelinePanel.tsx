@@ -254,9 +254,14 @@ export default function PipelinePanel({
       {(decision || error) &&
         (() => {
           // Determine the final outcome state based on human feedback
-          const isDeferred = humanFeedback === "accepted" && !overrideAction;
-          const isHumanApproved = overrideAction === "approve";
-          const isHumanBlocked = overrideAction === "block";
+          const isDeferred =
+            humanFeedback === "accepted" && decision?.decision === "escalate" && !overrideAction;
+          const isHumanApproved =
+            overrideAction === "approve" ||
+            (humanFeedback === "accepted" && decision?.decision === "approve");
+          const isHumanBlocked =
+            overrideAction === "block" ||
+            (humanFeedback === "accepted" && decision?.decision === "block");
 
           // Determine what to display
           const displayState = isDeferred

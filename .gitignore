@@ -32,14 +32,13 @@ intent.json
 *.log
 npm-debug.log*
 
-drift.json
-graph.json
-decisions.json
+*/drift.json
+*/graph.json
+*/decisions.json
 
-impact.json
-intent.json
-driftpack.json
-proof.json
-authorization-receipt.json
-driftpack.json
+*/impact.json
+*/intent.json
+*/proof.json
+*/authorization-receipt.json
+*/driftpack.json
 .dotto/*

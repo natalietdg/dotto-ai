@@ -1331,7 +1331,11 @@ export default function AnalysisViewApple({
               )}
               <button
                 className="action-btn action-btn--accept"
-                onClick={() => openAuthModal("accepted")}
+                onClick={() =>
+                  decision.decision === "escalate"
+                    ? openAuthModal("overridden", "approve")
+                    : openAuthModal("accepted")
+                }
                 disabled={submittingFeedback}
               >
                 <span>⚡</span> Authorize

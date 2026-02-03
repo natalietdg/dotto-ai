@@ -370,8 +370,13 @@ export async function runGovernor(
     };
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
+  // Collect all available API keys for fallback on rate limits
+  const apiKeys: string[] = [];
+  if (process.env.GEMINI_API_KEY) apiKeys.push(process.env.GEMINI_API_KEY);
+  if (process.env.GEMINI_API_KEY_2) apiKeys.push(process.env.GEMINI_API_KEY_2);
+  if (process.env.GEMINI_API_KEY_3) apiKeys.push(process.env.GEMINI_API_KEY_3);
+
+  if (apiKeys.length === 0) {
     return {
       decision: "escalate",
       risk_level: "high",
@@ -386,12 +391,13 @@ export async function runGovernor(
   }
 
   const modelName = config.model ?? process.env.GEMINI_MODEL ?? "gemini-3-flash-preview";
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: modelName });
+  let currentKeyIndex = 0;
+  let genAI = new GoogleGenerativeAI(apiKeys[currentKeyIndex]);
+  let model = genAI.getGenerativeModel({ model: modelName });
 
   const prompt = governorPrompt({ artifacts, policy, memory, context });
 
-  const timeoutMs = Number(process.env.GEMINI_TIMEOUT_MS ?? 45000);
+  const timeoutMs = Number(process.env.GEMINI_TIMEOUT_MS ?? 100000);
   const maxRetries = Number(process.env.GEMINI_MAX_RETRIES ?? 2);
 
   let lastErr: unknown;
@@ -400,6 +406,7 @@ export async function runGovernor(
       const result = await withTimeout(model.generateContent(prompt), timeoutMs, "Gemini request");
       const text = result.response.text();
 
+      console.log({ text });
       // Extract reasoning/thinking and decision from the response
       // Support both <reasoning> (new) and <thinking> (legacy) tags
       const reasoningMatch =
@@ -417,7 +424,8 @@ export async function runGovernor(
           .replace(/^```json\s*|^```\s*|```$/gm, "")
           .trim();
         parsed = JSON.parse(cleaned);
-      } catch {
+      } catch (error) {
+        console.log({ error });
         // Fail closed: require a machine-readable output.
         return {
           decision: "escalate",
@@ -452,7 +460,40 @@ export async function runGovernor(
 
       return decision;
     } catch (err) {
+      console.log({ err });
       lastErr = err;
+
+      // Check if this is a rate limit error (429)
+      // Google SDK errors have status property directly on the error object
+      const errObj = err as { status?: number; statusText?: string; message?: string };
+      const errStr = String(err);
+      const isRateLimitError =
+        errObj.status === 429 ||
+        errObj.statusText === "Too Many Requests" ||
+        errStr.includes("429") ||
+        errStr.includes("Too Many Requests") ||
+        errStr.includes("Quota exceeded");
+
+      console.log({
+        isRateLimitError,
+        status: errObj.status,
+        currentKeyIndex,
+        totalKeys: apiKeys.length,
+      });
+
+      if (isRateLimitError && currentKeyIndex < apiKeys.length - 1) {
+        // Switch to next API key
+        currentKeyIndex++;
+        console.log(
+          `Rate limit hit, switching to API key ${currentKeyIndex + 1} of ${apiKeys.length}`
+        );
+        genAI = new GoogleGenerativeAI(apiKeys[currentKeyIndex]);
+        model = genAI.getGenerativeModel({ model: modelName });
+        // Don't count this as a retry, try immediately with new key
+        attempt--;
+        continue;
+      }
+
       // Exponential backoff: 500ms, 1000ms, 2000ms...
       const backoff = 500 * Math.pow(2, attempt);
       if (attempt < maxRetries) await sleep(backoff);
@@ -466,10 +507,14 @@ export async function runGovernor(
       "Gemini request failed and could not be completed within the configured retry/timeout budget.",
       `model=${modelName}`,
       `error=${formatError(lastErr)}`,
+      `API keys tried: ${currentKeyIndex + 1} of ${apiKeys.length}`,
     ],
     conditions: [
       "Retry the pipeline when network connectivity is stable.",
       "If this persists, increase GEMINI_TIMEOUT_MS or GEMINI_MAX_RETRIES in CI, or investigate outbound network/proxy settings.",
+      apiKeys.length > 1
+        ? "All available API keys were exhausted due to rate limits."
+        : "Consider adding GEMINI_API_KEY_2 or GEMINI_API_KEY_3 for rate limit fallback.",
     ],
   };
 }

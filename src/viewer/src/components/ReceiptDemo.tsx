@@ -33,7 +33,7 @@ export default function ReceiptDemo() {
     };
 
     // Find the .whitepaper scroll container
-    const scrollContainer = document.querySelector('.whitepaper');
+    const scrollContainer = document.querySelector(".whitepaper");
     if (scrollContainer) {
       scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
       handleScroll();

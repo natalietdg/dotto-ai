@@ -3,7 +3,13 @@ import http from "node:http";
 import { readFile, writeFile, mkdir, access } from "node:fs/promises";
 import path from "node:path";
 
-import { assertDottoInstalled, generateArtifacts, loadArtifacts } from "./engine/dotto.js";
+import {
+  assertDottoInstalled,
+  generateArtifacts,
+  loadArtifacts,
+  GraphEngine,
+  ImpactAnalyzer,
+} from "./engine/dotto.js";
 import {
   runGovernor,
   GovernorDecision,
@@ -397,6 +403,56 @@ async function startServer(): Promise<void> {
         const artifacts = await loadArtifacts(artifactsDir);
         if (body.simulated?.drift) {
           artifacts.drift = body.simulated.drift;
+
+          // Recalculate impact based on simulated drift
+          try {
+            const graphPath = path.join(artifactsDir, "graph.json");
+            const graphEngine = new GraphEngine(graphPath);
+            const impactAnalyzer = new ImpactAnalyzer(graphEngine);
+            const analyses = [];
+
+            const driftObj = body.simulated.drift as {
+              diffs?: Array<{
+                nodeId: string;
+                changeType: string;
+                breaking: boolean;
+                name?: string;
+              }>;
+            };
+            const diffs = driftObj.diffs || [];
+
+            for (const diff of diffs) {
+              if (diff.changeType !== "unchanged") {
+                try {
+                  const impact = impactAnalyzer.analyze(diff.nodeId, 3);
+                  analyses.push({
+                    sourceNodeId: diff.nodeId,
+                    sourceName: diff.name || diff.nodeId,
+                    changeType: diff.changeType,
+                    breaking: diff.breaking,
+                    downstream: impact.impacted,
+                  });
+                } catch {
+                  // Node might not exist in current graph
+                }
+              }
+            }
+
+            artifacts.impact = {
+              timestamp: new Date().toISOString(),
+              analyses,
+              summary: {
+                totalChanges: diffs.length,
+                breakingChanges: diffs.filter((d) => d.breaking).length,
+                totalImpactedNodes: new Set(
+                  analyses.flatMap((a) => a.downstream.map((d: { nodeId: string }) => d.nodeId))
+                ).size,
+              },
+            };
+          } catch (e) {
+            console.log("Could not recalculate impact for simulated drift:", e);
+            // Keep original impact if recalculation fails
+          }
         }
         if (body.simulated?.intent) {
           artifacts.intent = {

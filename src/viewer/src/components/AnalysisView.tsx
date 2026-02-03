@@ -76,6 +76,7 @@ interface InputArtifacts {
 
 // Sanitize raw vendor errors into governance-grade language
 function sanitizeErrorText(text: string): string {
+  console.log({ text });
   if (
     text.includes("GoogleGenerativeAI Error") ||
     text.includes("429") ||

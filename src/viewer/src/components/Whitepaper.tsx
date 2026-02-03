@@ -50,89 +50,48 @@ function ProgressBar() {
   );
 }
 
-// Interactive Similarity Calculator
+// Static Similarity Breakdown (Read-only)
 function SimilarityCalculator() {
-  const [entityMatch, setEntityMatch] = useState(100);
-  const [breakingMatch, setBreakingMatch] = useState(100);
-  const [typeMatch, setTypeMatch] = useState(100);
-  const threshold = 60;
-
-  const totalScore = Math.round(entityMatch * 0.5 + breakingMatch * 0.25 + typeMatch * 0.25);
-  const passes = totalScore >= threshold;
-
-  const reset = () => {
-    setEntityMatch(100);
-    setBreakingMatch(100);
-    setTypeMatch(100);
-  };
-
   return (
     <div className="similarity-calc">
       <div className="similarity-calc__header">
-        <h4 className="similarity-calc__title">
-          <span>🎚️</span> Try It: Adjust Similarity Weights
-        </h4>
-        <button className="similarity-calc__reset" onClick={reset}>
-          Reset
-        </button>
+        <h4 className="similarity-calc__title">Similarity Breakdown</h4>
       </div>
 
-      <div className="similarity-calc__sliders">
-        <div className="similarity-calc__slider-row">
-          <span className="similarity-calc__slider-label">Entity Match</span>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={entityMatch}
-            onChange={(e) => setEntityMatch(Number(e.target.value))}
-            className="similarity-calc__slider"
-          />
-          <span className="similarity-calc__slider-value">{entityMatch}%</span>
+      <div className="similarity-calc__breakdown">
+        <div className="similarity-calc__breakdown-row">
+          <span className="similarity-calc__breakdown-label">Entity match</span>
+          <span className="similarity-calc__breakdown-calc">31% × 0.5</span>
+          <span className="similarity-calc__breakdown-value">= 15.5%</span>
         </div>
-        <div className="similarity-calc__slider-row">
-          <span className="similarity-calc__slider-label">Breaking Match</span>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={breakingMatch}
-            onChange={(e) => setBreakingMatch(Number(e.target.value))}
-            className="similarity-calc__slider"
-          />
-          <span className="similarity-calc__slider-value">{breakingMatch}%</span>
+        <div className="similarity-calc__breakdown-row">
+          <span className="similarity-calc__breakdown-label">Breaking status</span>
+          <span className="similarity-calc__breakdown-calc">100% × 0.25</span>
+          <span className="similarity-calc__breakdown-value">= 25%</span>
         </div>
-        <div className="similarity-calc__slider-row">
-          <span className="similarity-calc__slider-label">Type Match</span>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={typeMatch}
-            onChange={(e) => setTypeMatch(Number(e.target.value))}
-            className="similarity-calc__slider"
-          />
-          <span className="similarity-calc__slider-value">{typeMatch}%</span>
+        <div className="similarity-calc__breakdown-row">
+          <span className="similarity-calc__breakdown-label">Type match</span>
+          <span className="similarity-calc__breakdown-calc">100% × 0.25</span>
+          <span className="similarity-calc__breakdown-value">= 25%</span>
+        </div>
+        <div className="similarity-calc__breakdown-divider"></div>
+        <div className="similarity-calc__breakdown-row similarity-calc__breakdown-row--total">
+          <span className="similarity-calc__breakdown-label">Total similarity</span>
+          <span className="similarity-calc__breakdown-value similarity-calc__breakdown-value--total">
+            66%
+          </span>
         </div>
       </div>
 
-      <div
-        className={`similarity-calc__result ${passes ? "similarity-calc__result--pass" : "similarity-calc__result--fail"}`}
-      >
-        <div className="similarity-calc__score">
-          <span className="similarity-calc__score-label">Total Similarity</span>
-          <span className="similarity-calc__score-value">{totalScore}%</span>
-        </div>
-        <div
-          className={`similarity-calc__verdict ${passes ? "similarity-calc__verdict--pass" : "similarity-calc__verdict--fail"}`}
-        >
-          <span className="similarity-calc__verdict-icon">{passes ? "✓" : "✕"}</span>
-          <span>{passes ? "Auto-authorized" : "Requires review"}</span>
+      <div className="similarity-calc__result similarity-calc__result--pass">
+        <div className="similarity-calc__verdict similarity-calc__verdict--pass">
+          <span className="similarity-calc__verdict-icon">✓</span>
+          <span>Auto-authorized</span>
         </div>
       </div>
 
       <p className="similarity-calc__threshold-note">
-        Threshold: {threshold}% • Formula: (Entity × 0.5) + (Breaking × 0.25) + (Type × 0.25)
+        Deterministic. Explainable. Auditable. No embeddings.
       </p>
     </div>
   );
@@ -145,57 +104,6 @@ function Jargon({ definition, children }: { definition: string; children: React.
       {children}
       <span className="jargon__tooltip">{definition}</span>
     </span>
-  );
-}
-
-// Impact Metrics - key numbers callout with scroll animation
-function ImpactMetrics() {
-  const [isVisible, setIsVisible] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.2 }
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div
-      ref={ref}
-      className={`impact-metrics scroll-reveal ${isVisible ? "scroll-reveal--visible" : ""}`}
-    >
-      <h3 className="impact-metrics__title">With Dotto, the system guarantees:</h3>
-      <div className="impact-metrics__grid">
-        <div className="impact-metrics__stat">
-          <span className="impact-metrics__icon">🔒</span>
-          <span className="impact-metrics__value">No silent production changes</span>
-          <span className="impact-metrics__label">Deployment requires a signed human receipt</span>
-        </div>
-        <div className="impact-metrics__stat">
-          <span className="impact-metrics__icon">🧾</span>
-          <span className="impact-metrics__value">Every decision is auditable</span>
-          <span className="impact-metrics__label">Immutable receipts bound to exact artifacts</span>
-        </div>
-        <div className="impact-metrics__stat">
-          <span className="impact-metrics__icon">🤖</span>
-          <span className="impact-metrics__value">AI is advisory only</span>
-          <span className="impact-metrics__label">Gemini can recommend, never authorize</span>
-        </div>
-        <div className="impact-metrics__stat">
-          <span className="impact-metrics__icon">🔁</span>
-          <span className="impact-metrics__value">Governance cost decreases over time</span>
-          <span className="impact-metrics__label">Precedent enables auto-authorization</span>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -601,8 +509,6 @@ export default function Whitepaper() {
           <>
             <AhaMoment />
 
-            <ImpactMetrics />
-
             {/* Who Benefits */}
             <section id="who-benefits" className="whitepaper__section whitepaper__section--visible">
               <h2 className="section__title">Who Benefits</h2>
@@ -777,9 +683,8 @@ export default function Whitepaper() {
             >
               <h2 className="section__title">What is Dotto?</h2>
               <div className="content-block">
-                <p>Dotto is a change-control governor between code and production.</p>
-                <p>It evaluates detected change against policy and precedent.</p>
-                <p>When rules are insufficient, it issues a recommendation.</p>
+                <p>Dotto is a governor between code and production.</p>
+                <p>It evaluates drift against policy and precedent.</p>
                 <p>
                   <strong>Only humans authorize outcomes.</strong>
                 </p>

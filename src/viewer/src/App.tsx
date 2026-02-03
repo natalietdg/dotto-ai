@@ -77,6 +77,7 @@ function App() {
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -142,6 +143,7 @@ function App() {
       return "Reliability threshold exceeded. Request volume surpassed allocated budget.";
     }
     if (text.includes("timed out") || text.includes("timeout")) {
+      console.log({ text });
       return "Operational timeout. Analysis did not complete within reliability budget.";
     }
     if (text.includes("GEMINI_API_KEY") || text.includes("API key")) {
@@ -330,6 +332,15 @@ function App() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
+    // Clear pipeline/analysis state
+    setPipelineDecision(null);
+    setHumanFeedback(null);
+    setOverrideAction(null);
+    setPipelineChangeId(`local-${Date.now()}`);
+    setSelectedNode(null);
+    // Increment reset key to force AnalysisView to remount (clears scenario selection)
+    setResetKey((k) => k + 1);
+    // Re-fetch data
     await fetchData();
     setIsRefreshing(false);
   };
@@ -1011,6 +1022,7 @@ function App() {
         className={`view-container ${view === "analysis" ? "view-container--active" : "view-container--hidden"}`}
       >
         <AnalysisView
+          key={resetKey}
           artifacts={stats}
           artifactsList={artifacts}
           pipelineState={{
