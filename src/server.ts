@@ -381,6 +381,10 @@ async function startServer(): Promise<void> {
         return;
       }
 
+      if(req.method === 'GET' && req.url === "/health") {
+        return { health: true, message: "OK" };
+      }
+
       if (req.method === "POST" && req.url === "/run") {
         const body = (await readJsonBody(req)) as {
           artifactsDir?: string;
