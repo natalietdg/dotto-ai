@@ -21,9 +21,9 @@ const TOUR_STEPS: TourStep[] = [
   {
     id: "gemini-brand",
     target: ".apple-analysis__brand",
-    title: "Powered by Gemini 3",
+    title: "AI-Powered Analysis",
     content:
-      "Dotto uses Google's Gemini 3 AI to analyze schema changes, evaluate policy compliance, and provide governance recommendations.",
+      "Dotto uses AI to analyze schema changes, evaluate policy compliance, and provide governance recommendations.",
     position: "bottom",
   },
   {
@@ -55,7 +55,7 @@ const TOUR_STEPS: TourStep[] = [
     target: ".apple-analysis__tabs",
     title: "Analysis Views",
     content:
-      "Switch between Summary (AI reasoning), Gemini Context (input artifacts), and Affected Systems (impacted schemas).",
+      "Switch between Summary (AI reasoning), AI Context (input artifacts), and Affected Systems (impacted schemas).",
     position: "bottom",
   },
   {

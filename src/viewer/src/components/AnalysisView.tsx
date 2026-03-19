@@ -596,14 +596,15 @@ export default function AnalysisView({
                     {decision.precedent_match && (
                       <div className="auto-auth-success__details">
                         <p>
-                          <strong>Prior ruling:</strong> {decision.precedent_match.change_id}
+                          <strong>Precedent ruling:</strong> receipt{" "}
+                          {decision.precedent_match.change_id}
                         </p>
                         <p>
                           <strong>Approved:</strong>{" "}
                           {new Date(decision.precedent_match.timestamp).toLocaleDateString()}
                         </p>
                         <p>
-                          <strong>Similarity:</strong>{" "}
+                          <strong>Similarity score:</strong>{" "}
                           {Math.round(decision.precedent_match.similarity * 100)}%
                         </p>
                       </div>

@@ -10,6 +10,7 @@ export { ProofBackend } from "./ProofBackend.js";
 export { NoneBackend } from "./NoneBackend.js";
 export { HederaBackend } from "./HederaBackend.js";
 export { EpochManager, Epoch, EpochArtifact } from "./EpochManager.js";
+export { HederaNFTService, type NftProof } from "./HederaNFTService.js";
 
 export function createProofBackend(type: string): ProofBackend {
   switch (type.toLowerCase()) {

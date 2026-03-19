@@ -1,0 +1,35 @@
+# Source (dist/ is the published artifact)
+src/
+tsconfig.json
+
+# Environment and secrets
+.env
+.env.*
+
+# PRDs and docs (not shipped)
+PRD-*.md
+refinement*.md
+genshin-impact.md
+
+# Dev/build tooling
+scripts/
+.claude/
+.dotto/
+.vscode/
+.idea/
+
+# Artifacts (regenerated)
+artifacts/
+examples/
+graph.json
+drift.json
+
+# Viewer (separate app)
+src/viewer/
+
+# Test reports
+hedera-test-report.json
+
+# OS files
+.DS_Store
+Thumbs.db

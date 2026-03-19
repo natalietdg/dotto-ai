@@ -1,4 +1,4 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env node
 /**
  * dotto local scan - Compare two TypeScript files and generate drift.json
  *

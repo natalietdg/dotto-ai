@@ -1,6 +1,6 @@
 import "dotenv/config";
 import http from "node:http";
-import { readFile, writeFile, mkdir, access } from "node:fs/promises";
+import { readFile, writeFile, mkdir, access, realpath } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -22,8 +22,13 @@ import {
   formatReceiptForDisplay,
   upgradeLegacyReceipt,
   anchorReceiptToHedera,
+  getNFTServiceInstance,
+  initializeKMS,
+  getKMSSigner,
   AuthorizationReceipt,
 } from "./crypto/receipt.js";
+import { HederaBackend } from "./engine/proof/HederaBackend.js";
+import { HCS10AgentManager } from "./engine/hcs10/HCS10AgentManager.js";
 
 type StoredDecision = {
   timestamp: string;
@@ -42,9 +47,10 @@ type StoredDecision = {
 async function generateAuthorizationReceipt(
   decision: GovernorDecision,
   changeId: string,
-  artifacts: unknown
+  artifacts: unknown,
+  agentManager?: HCS10AgentManager | null
 ): Promise<AuthorizationReceipt> {
-  const receipt = createReceipt({
+  const receipt = await createReceipt({
     change_id: changeId,
     ruling: decision.decision,
     risk_level: decision.risk_level,
@@ -53,9 +59,63 @@ async function generateAuthorizationReceipt(
     precedent_match: decision.precedent_match,
   });
 
+  // Attach agent identity if HCS-10 agent is registered
+  if (agentManager) {
+    const info = agentManager.getAgentInfo();
+    if (info.registered && info.accountId && info.inboundTopicId && info.outboundTopicId) {
+      receipt.agent_identity = {
+        account_id: info.accountId,
+        inbound_topic: info.inboundTopicId,
+        outbound_topic: info.outboundTopicId,
+        network: info.network || "testnet",
+        registry: "HOL",
+      };
+    }
+  }
+
   // Anchor to Hedera if configured (for approved decisions)
   if (decision.decision === "approve") {
-    return await anchorReceiptToHedera(receipt);
+    const anchored = await anchorReceiptToHedera(receipt);
+    // If Hedera anchoring returned proof, we're done
+    if (anchored.hedera_proof) return anchored;
+  }
+
+  // Demo fallback: populate Hedera proof data using real testnet agent
+  // identity so Hashscan links resolve. Marked as demo (not anchored).
+  const network = process.env.HEDERA_NETWORK || "testnet";
+  const demoAccountId = "0.0.8145658";
+  const demoTopicId = "0.0.8145666";
+
+  if (!receipt.hedera_proof) {
+    receipt.hedera_proof = {
+      backend: "hedera",
+      topic_id: demoTopicId,
+      sequence_number: "—",
+      transaction_id: "not-anchored",
+      timestamp: new Date().toISOString(),
+      hashscan_link: `https://hashscan.io/${network}/account/${demoAccountId}`,
+      demo: true,
+    };
+  }
+
+  if (!receipt.nft_proof && decision.decision === "approve") {
+    receipt.nft_proof = {
+      token_id: "0.0.7224100",
+      serial_number: "—",
+      hashscan_link: `https://hashscan.io/${network}/account/${demoAccountId}`,
+      demo: true,
+    };
+  }
+
+  if (!receipt.agent_identity) {
+    receipt.agent_identity = {
+      account_id: demoAccountId,
+      inbound_topic: demoTopicId,
+      outbound_topic: demoTopicId,
+      network,
+      registry: "HOL",
+      demo: true,
+    };
   }
 
   return receipt;
@@ -216,6 +276,59 @@ async function startServer(): Promise<void> {
     console.error("Failed to generate artifacts:", err);
   }
 
+  // Initialize Hedera epoch batching backend
+  let hederaBackend: HederaBackend | null = null;
+  if (process.env.HEDERA_ACCOUNT_ID && process.env.HEDERA_TOPIC_ID) {
+    try {
+      hederaBackend = new HederaBackend(true, 15); // batch mode, 15-min epochs
+      await hederaBackend.initialize();
+      hederaBackend.startEpochTimer();
+      console.log("[Hedera] Epoch batching backend initialized");
+    } catch (err) {
+      console.error("[Hedera] Failed to initialize epoch backend:", err);
+      hederaBackend = null;
+    }
+  }
+
+  // Initialize HCS-10 agent for HOL Registry (non-blocking)
+  let hcs10Agent: HCS10AgentManager | null = null;
+  if (process.env.HEDERA_ACCOUNT_ID && process.env.HEDERA_PRIVATE_KEY) {
+    try {
+      hcs10Agent = new HCS10AgentManager();
+      await hcs10Agent.initialize();
+      hcs10Agent.startPolling();
+      console.log("[HCS-10] Agent manager initialized");
+    } catch (err) {
+      console.error("[HCS-10] Failed to initialize agent:", err);
+      hcs10Agent = null;
+    }
+  }
+
+  // Initialize AWS KMS signing (optional — falls back to HMAC if not configured)
+  const kmsReady = await initializeKMS();
+  if (kmsReady) {
+    console.log("[KMS] AWS KMS receipt signing enabled");
+  }
+
+  // Resolve a relative path under a root directory with symlink-aware traversal protection.
+  // Returns the safe absolute path, or null if traversal is detected.
+  async function safePath(root: string, rel: string): Promise<string | null> {
+    if (!rel || rel.includes("..") || rel.includes("\\") || rel.startsWith("/")) {
+      return null;
+    }
+    const canonicalRoot = await realpath(root).catch(() => path.resolve(root));
+    const candidate = path.resolve(canonicalRoot, rel);
+    // Resolve symlinks so aliased paths can't escape the root
+    const canonicalCandidate = await realpath(candidate).catch(() => candidate);
+    if (
+      !canonicalCandidate.startsWith(canonicalRoot + path.sep) &&
+      canonicalCandidate !== canonicalRoot
+    ) {
+      return null;
+    }
+    return canonicalCandidate;
+  }
+
   const server = http.createServer(async (req: http.IncomingMessage, res: http.ServerResponse) => {
     // CORS headers for cross-domain requests (Netlify frontend -> Render backend)
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -242,7 +355,6 @@ async function startServer(): Promise<void> {
       }
 
       if (req.method === "GET" && pathname.startsWith("/artifacts/")) {
-        // Decode URI to handle encoded traversal attempts (%2e%2e%2f = ../)
         let rel: string;
         try {
           rel = decodeURIComponent(pathname.replace("/artifacts/", ""));
@@ -252,18 +364,8 @@ async function startServer(): Promise<void> {
           return;
         }
 
-        // Check for path traversal after decoding
-        if (!rel || rel.includes("..") || rel.includes("\\") || rel.startsWith("/")) {
-          res.writeHead(400, { "content-type": "application/json" });
-          res.end(JSON.stringify({ error: "invalid_request" }));
-          return;
-        }
-
-        const artifactsRoot = path.resolve("artifacts");
-        const filePath = path.resolve(artifactsRoot, rel);
-
-        // Double-check resolved path is still within allowed directory
-        if (!filePath.startsWith(artifactsRoot + path.sep) && filePath !== artifactsRoot) {
+        const filePath = await safePath(path.resolve("artifacts"), rel);
+        if (!filePath) {
           res.writeHead(400, { "content-type": "application/json" });
           res.end(JSON.stringify({ error: "invalid_request" }));
           return;
@@ -291,15 +393,8 @@ async function startServer(): Promise<void> {
           return;
         }
 
-        if (!rel || rel.includes("..") || rel.includes("\\") || rel.startsWith("/")) {
-          res.writeHead(400, { "content-type": "application/json" });
-          res.end(JSON.stringify({ error: "invalid_request" }));
-          return;
-        }
-
-        const examplesRoot = path.resolve("examples");
-        const filePath = path.resolve(examplesRoot, rel);
-        if (!filePath.startsWith(examplesRoot + path.sep) && filePath !== examplesRoot) {
+        const filePath = await safePath(path.resolve("examples"), rel);
+        if (!filePath) {
           res.writeHead(400, { "content-type": "application/json" });
           res.end(JSON.stringify({ error: "invalid_request" }));
           return;
@@ -327,15 +422,8 @@ async function startServer(): Promise<void> {
           return;
         }
 
-        if (!rel || rel.includes("..") || rel.includes("\\") || rel.startsWith("/")) {
-          res.writeHead(400, { "content-type": "application/json" });
-          res.end(JSON.stringify({ error: "invalid_request" }));
-          return;
-        }
-
-        const memoryRoot = path.resolve("src/memory");
-        const filePath = path.resolve(memoryRoot, rel);
-        if (!filePath.startsWith(memoryRoot + path.sep) && filePath !== memoryRoot) {
+        const filePath = await safePath(path.resolve("src/memory"), rel);
+        if (!filePath) {
           res.writeHead(400, { "content-type": "application/json" });
           res.end(JSON.stringify({ error: "invalid_request" }));
           return;
@@ -386,8 +474,9 @@ async function startServer(): Promise<void> {
               })
             );
           } else {
+            console.error("[server] /dotto/run error:", msg);
             res.writeHead(500, { "content-type": "application/json" });
-            res.end(JSON.stringify({ error: "internal_error", message: msg }));
+            res.end(JSON.stringify({ error: "internal_error", message: "Governance run failed." }));
           }
         }
         return;
@@ -490,7 +579,12 @@ async function startServer(): Promise<void> {
         );
 
         // Generate and write authorization receipt (with Hedera anchoring if configured)
-        const receipt = await generateAuthorizationReceipt(decision, changeId, artifacts);
+        const receipt = await generateAuthorizationReceipt(
+          decision,
+          changeId,
+          artifacts,
+          hcs10Agent
+        );
         await writeAuthorizationReceipt(artifactsDir, receipt);
 
         // Post GitHub status if token is available and changeId looks like a SHA
@@ -535,6 +629,41 @@ async function startServer(): Promise<void> {
             // Log but don't fail the request if GitHub status post fails
             console.error("Failed to post GitHub status:", err);
           }
+        }
+
+        // Record governance event in epoch batch for Merkle anchoring
+        if (hederaBackend) {
+          try {
+            await hederaBackend.record({
+              nodeId: changeId,
+              eventType: "modified",
+              hash: receipt.artifacts_hash,
+              metadata: {
+                ruling: decision.decision,
+                risk_level: decision.risk_level,
+                breaking: decision.risk_level === "high",
+              },
+              timestamp: new Date().toISOString(),
+            });
+          } catch (err) {
+            console.error("[Hedera] Failed to record epoch event:", err);
+          }
+        }
+
+        // Log governance event to HCS-10 outbound topic
+        if (hcs10Agent) {
+          hcs10Agent.logGovernanceEvent({
+            type: "decision",
+            change_id: changeId,
+            ruling: decision.decision,
+            risk_level: decision.risk_level,
+            timestamp: new Date().toISOString(),
+            metadata: {
+              auto_authorized: decision.auto_authorized,
+              nft_proof: receipt.nft_proof || undefined,
+              hedera_proof: receipt.hedera_proof || undefined,
+            },
+          });
         }
 
         // Include receipt in response
@@ -624,7 +753,8 @@ async function startServer(): Promise<void> {
               conditions: [],
             },
             body.change_id,
-            artifacts
+            artifacts,
+            hcs10Agent
           );
           await writeAuthorizationReceipt(artifactsDir, receipt);
         } catch (err) {
@@ -936,18 +1066,183 @@ async function startServer(): Promise<void> {
         return;
       }
 
+      // Serve full receipt JSON for NFT metadata URL target
+      if (req.method === "GET" && pathname.startsWith("/receipts/")) {
+        let changeId: string;
+        try {
+          changeId = decodeURIComponent(pathname.replace("/receipts/", ""));
+        } catch {
+          res.writeHead(400, { "content-type": "application/json" });
+          res.end(JSON.stringify({ error: "invalid_request" }));
+          return;
+        }
+
+        if (!changeId || changeId.includes("..") || changeId.includes("/")) {
+          res.writeHead(400, { "content-type": "application/json" });
+          res.end(JSON.stringify({ error: "invalid_request" }));
+          return;
+        }
+
+        // Load receipt from artifacts
+        const receiptPath = path.resolve("artifacts", "authorization-receipt.json");
+        try {
+          const raw = await readFile(receiptPath, "utf8");
+          const receipt = JSON.parse(raw) as AuthorizationReceipt;
+          if (receipt.change_id === changeId) {
+            res.writeHead(200, { "content-type": "application/json" });
+            res.end(JSON.stringify(receipt, null, 2));
+          } else {
+            res.writeHead(404, { "content-type": "application/json" });
+            res.end(
+              JSON.stringify({
+                error: "not_found",
+                message: "Receipt not found for this change_id",
+              })
+            );
+          }
+        } catch {
+          res.writeHead(404, { "content-type": "application/json" });
+          res.end(JSON.stringify({ error: "not_found" }));
+        }
+        return;
+      }
+
+      // HCS-10 agent info
+      if (req.method === "GET" && pathname === "/hedera/agent") {
+        if (!hcs10Agent) {
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ registered: false, message: "HCS-10 agent not configured" }));
+          return;
+        }
+
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify(hcs10Agent.getAgentInfo()));
+        return;
+      }
+
+      // Epoch batching history
+      if (req.method === "GET" && pathname === "/hedera/epochs") {
+        if (!hederaBackend) {
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ available: false, message: "Epoch batching not configured" }));
+          return;
+        }
+
+        const epochManager = hederaBackend.getEpochManager();
+        const submitted = hederaBackend.getSubmittedEpochs();
+
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            available: true,
+            ...epochManager.toJSON(),
+            submitted_epochs: submitted.map((s) => ({
+              epoch_id: s.epoch.epoch_id,
+              timestamp: s.epoch.timestamp,
+              artifact_count: s.epoch.artifacts.length,
+              merkle_root: s.epoch.merkle_root,
+              hashscan_link: s.proof.link,
+            })),
+          })
+        );
+        return;
+      }
+
+      // NFT collection info
+      if (req.method === "GET" && pathname === "/hedera/nft-collection") {
+        const nftService = getNFTServiceInstance();
+        if (!nftService) {
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ available: false, message: "NFT service not initialized" }));
+          return;
+        }
+
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ available: true, ...nftService.getCollectionInfo() }));
+        return;
+      }
+
+      // Full Hedera proof chain for a receipt
+      if (req.method === "GET" && pathname === "/hedera/proof") {
+        const receiptPath = path.resolve("artifacts", "authorization-receipt.json");
+        try {
+          const raw = await readFile(receiptPath, "utf8");
+          const receipt = JSON.parse(raw) as AuthorizationReceipt;
+
+          const nftService = getNFTServiceInstance();
+
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(
+            JSON.stringify({
+              change_id: receipt.change_id,
+              ruling: receipt.ruling,
+              hcs_proof: receipt.hedera_proof || null,
+              nft_proof: receipt.nft_proof || null,
+              nft_collection: nftService?.getCollectionInfo() || null,
+            })
+          );
+        } catch {
+          res.writeHead(404, { "content-type": "application/json" });
+          res.end(
+            JSON.stringify({ error: "no_receipt", message: "No authorization receipt found" })
+          );
+        }
+        return;
+      }
+
+      if (req.method === "GET" && pathname === "/hedera/kms") {
+        const signer = getKMSSigner();
+        if (signer) {
+          const info = signer.getKeyInfo();
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(
+            JSON.stringify({
+              enabled: true,
+              key_id: info.keyId,
+              region: info.region,
+              algorithm: info.algorithm,
+              key_spec: "ECC_SECG_P256K1",
+            })
+          );
+        } else {
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(
+            JSON.stringify({
+              enabled: false,
+              message: "AWS KMS not configured. Set AWS_KMS_KEY_ID and AWS_REGION to enable.",
+            })
+          );
+        }
+        return;
+      }
+
       res.writeHead(404, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: "not_found" }));
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[server] Unhandled request error:", err);
       res.writeHead(500, { "content-type": "application/json" });
-      res.end(JSON.stringify({ error: "internal_error", message: msg }));
+      res.end(JSON.stringify({ error: "internal_error", message: "Unexpected server error." }));
     }
   });
 
   server.listen(port, () => {
     process.stdout.write(`dotto-ai server listening on :${port}\n`);
   });
+
+  // Graceful shutdown: flush epoch batch, stop agent, close clients
+  const shutdown = async (signal: string) => {
+    console.log(`\n[${signal}] Shutting down...`);
+    if (hcs10Agent) {
+      await hcs10Agent.stop();
+    }
+    if (hederaBackend) {
+      await hederaBackend.close();
+    }
+    server.close(() => process.exit(0));
+  };
+
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
 }
 
 async function runEnforce(): Promise<number> {

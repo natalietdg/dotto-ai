@@ -17,6 +17,8 @@ export class HederaBackend implements ProofBackend {
   private topicId: string;
   private epochManager: EpochManager;
   private batchMode: boolean;
+  private epochTimer: ReturnType<typeof setInterval> | null = null;
+  private epochHistory: Array<{ epoch: Epoch; proof: ProofRef }> = [];
 
   constructor(batchMode: boolean = false, epochIntervalMinutes: number = 15) {
     this.topicId = process.env.HEDERA_TOPIC_ID || "";
@@ -142,14 +144,18 @@ export class HederaBackend implements ProofBackend {
     const response = await transaction.execute(this.client);
     const receipt = await response.getReceipt(this.client);
 
+    const transactionId = response.transactionId.toString();
     const txId = `${this.topicId}@${receipt.topicSequenceNumber}`;
 
+    const network = process.env.HEDERA_NETWORK || "testnet";
     const proof: ProofRef = {
       backend: this.name,
       id: txId,
       timestamp: new Date().toISOString(),
-      link: `https://hashscan.io/testnet/topic/${this.topicId}/message/${receipt.topicSequenceNumber}`,
+      link: `https://hashscan.io/${network}/transaction/${transactionId}`,
     };
+
+    this.epochHistory.push({ epoch, proof });
 
     return { epoch, proof };
   }
@@ -174,6 +180,51 @@ export class HederaBackend implements ProofBackend {
     return this.epochManager;
   }
 
+  /**
+   * Start automatic epoch submission on a timer.
+   */
+  startEpochTimer(): void {
+    if (this.epochTimer) return;
+
+    const intervalMs = this.epochManager.getStats().intervalMinutes * 60 * 1000;
+    console.log(
+      `[Hedera] Epoch timer started (every ${this.epochManager.getStats().intervalMinutes} min)`
+    );
+
+    this.epochTimer = setInterval(async () => {
+      if (this.epochManager.getCurrentEpochSize() === 0) return;
+
+      try {
+        const result = await this.submitEpoch();
+        if (result) {
+          console.log(
+            `[Hedera] Epoch #${result.epoch.epoch_id} submitted (${result.epoch.artifacts.length} artifacts, root: ${result.epoch.merkle_root.slice(0, 16)}...)`
+          );
+        }
+      } catch (err) {
+        console.error("[Hedera] Epoch submission failed:", err);
+      }
+    }, intervalMs);
+  }
+
+  /**
+   * Stop the epoch timer.
+   */
+  stopEpochTimer(): void {
+    if (this.epochTimer) {
+      clearInterval(this.epochTimer);
+      this.epochTimer = null;
+      console.log("[Hedera] Epoch timer stopped");
+    }
+  }
+
+  /**
+   * Get history of submitted epochs with their proofs.
+   */
+  getSubmittedEpochs(): Array<{ epoch: Epoch; proof: ProofRef }> {
+    return [...this.epochHistory];
+  }
+
   async verify(ref: ProofRef): Promise<boolean> {
     // Verification would query HCS for the message
     // For now, we trust the reference format
@@ -185,6 +236,22 @@ export class HederaBackend implements ProofBackend {
   }
 
   async close(): Promise<void> {
+    this.stopEpochTimer();
+
+    // Flush any pending epoch artifacts
+    if (this.epochManager.getCurrentEpochSize() > 0) {
+      try {
+        const result = await this.submitEpoch();
+        if (result) {
+          console.log(
+            `[Hedera] Flushed final epoch #${result.epoch.epoch_id} (${result.epoch.artifacts.length} artifacts)`
+          );
+        }
+      } catch (err) {
+        console.error("[Hedera] Failed to flush final epoch:", err);
+      }
+    }
+
     if (this.client) {
       await this.client.close();
       this.client = null;
