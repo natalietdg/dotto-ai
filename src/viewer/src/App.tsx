@@ -1490,7 +1490,7 @@ function App() {
       )}
 
       {/* Onboarding Tour */}
-      <OnboardingTour forceShow={showTour} onComplete={() => setShowTour(false)} />
+      {/* <OnboardingTour forceShow={showTour} onComplete={() => setShowTour(false)} /> */}
 
       {/* Keyboard Shortcuts Modal */}
       <KeyboardShortcutsModal
