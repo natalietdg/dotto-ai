@@ -254,10 +254,25 @@ export default function AnalysisViewApple({
             c.field === node.name || // Match by field name
             node.name.includes(c.field || "")
         );
+        // Check if this node is a downstream consumer of a breaking change
+        const isImpacted =
+          !hasBreaking &&
+          !hasChange &&
+          activeGraph.edges?.some(
+            (e) =>
+              e.target === node.id &&
+              activeDrift?.changes.some(
+                (c) =>
+                  c.breaking &&
+                  (c.schemaName === activeGraph.nodes[e.source]?.name ||
+                    c.field === activeGraph.nodes[e.source]?.name)
+              )
+          );
 
         let status: Artifact["status"] = "verified";
         if (hasBreaking) status = "drifted";
         else if (hasChange) status = "changed";
+        else if (isImpacted) status = "impacted";
 
         return {
           id: node.id,
