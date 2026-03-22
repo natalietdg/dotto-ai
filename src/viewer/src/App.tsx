@@ -71,6 +71,8 @@ function App() {
     reasoning: string[];
     conditions?: string[];
     thinking?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    receipt?: any;
   } | null>(null);
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [pipelineChangeId, setPipelineChangeId] = useState<string>(`local-${Date.now()}`);
