@@ -725,8 +725,8 @@ export default function AnalysisViewApple({
       });
       const feedbackData = await feedbackRes.json();
       // Update decision with the new receipt (has real Hedera proof after authorize)
-      if (feedbackData.receipt) {
-        setDecision((prev) => (prev ? { ...prev, receipt: feedbackData.receipt } : prev));
+      if (feedbackData.receipt && decision) {
+        setDecision({ ...decision, receipt: feedbackData.receipt });
       }
       setHumanFeedback(outcome);
       if (override) setOverrideAction(override);
