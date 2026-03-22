@@ -4,6 +4,7 @@
  * Validates the full dotto governance protocol on Hedera testnet:
  *
  * Protocol Steps:
+ *
  *   1. Governance Anchor    — HCS message submission
  *   2. Receipt NFT          — HTS collection creation + minting
  *   3. Epoch Proof          — Merkle tree batching + root submission

@@ -705,7 +705,7 @@ export default function AnalysisViewApple({
           }
         : inputArtifacts?.drift;
 
-      await fetch(apiUrl("/feedback"), {
+      const feedbackRes = await fetch(apiUrl("/feedback"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -723,6 +723,11 @@ export default function AnalysisViewApple({
           drift: driftForServer,
         }),
       });
+      const feedbackData = await feedbackRes.json();
+      // Update decision with the new receipt (has real Hedera proof after authorize)
+      if (feedbackData.receipt) {
+        setDecision((prev) => (prev ? { ...prev, receipt: feedbackData.receipt } : prev));
+      }
       setHumanFeedback(outcome);
       if (override) setOverrideAction(override);
       onDecisionHistoryUpdate?.();

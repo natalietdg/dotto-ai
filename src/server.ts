@@ -743,6 +743,7 @@ async function startServer(): Promise<void> {
             : body.governor.decision;
 
         // Load artifacts to generate receipt (with Hedera anchoring if configured)
+        let feedbackReceipt: Awaited<ReturnType<typeof generateAuthorizationReceipt>> | null = null;
         try {
           const artifacts = await loadArtifacts(artifactsDir);
           const receipt = await generateAuthorizationReceipt(
@@ -757,6 +758,7 @@ async function startServer(): Promise<void> {
             hcs10Agent
           );
           await writeAuthorizationReceipt(artifactsDir, receipt);
+          feedbackReceipt = receipt;
 
           // Record governance event in epoch batch
           if (hederaBackend) {
@@ -781,7 +783,9 @@ async function startServer(): Promise<void> {
             try {
               const epochResult = await hederaBackend.submitEpoch();
               if (epochResult) {
-                console.log(`[Hedera] Epoch force-submitted on authorize: epoch ${epochResult.epoch.epoch_id}, ${epochResult.epoch.artifacts.length} artifacts`);
+                console.log(
+                  `[Hedera] Epoch force-submitted on authorize: epoch ${epochResult.epoch.epoch_id}, ${epochResult.epoch.artifacts.length} artifacts`
+                );
               }
             } catch (err) {
               console.error("[Hedera] Failed to force-submit epoch:", err);
@@ -802,13 +806,17 @@ async function startServer(): Promise<void> {
               },
             });
           }
-
         } catch (err) {
           console.error("Failed to write receipt after feedback:", err);
         }
 
         res.writeHead(200, { "content-type": "application/json" });
-        res.end(JSON.stringify({ ok: true }));
+        res.end(
+          JSON.stringify({
+            ok: true,
+            ...(feedbackReceipt ? { receipt: feedbackReceipt } : {}),
+          })
+        );
         return;
       }
 
