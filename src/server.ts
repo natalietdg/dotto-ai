@@ -757,6 +757,52 @@ async function startServer(): Promise<void> {
             hcs10Agent
           );
           await writeAuthorizationReceipt(artifactsDir, receipt);
+
+          // Record governance event in epoch batch
+          if (hederaBackend) {
+            try {
+              await hederaBackend.record({
+                nodeId: body.change_id,
+                eventType: "modified",
+                hash: receipt.artifacts_hash,
+                metadata: {
+                  ruling: finalRuling,
+                  risk_level: body.governor.risk_level,
+                  breaking: body.governor.risk_level === "high",
+                  human_feedback: body.human.outcome,
+                },
+                timestamp: new Date().toISOString(),
+              });
+            } catch (err) {
+              console.error("[Hedera] Failed to record epoch event:", err);
+            }
+
+            // Force-submit Merkle epoch immediately on authorize
+            try {
+              const epochResult = await hederaBackend.submitEpoch();
+              if (epochResult) {
+                console.log(`[Hedera] Epoch force-submitted on authorize: epoch ${epochResult.epoch.epoch_id}, ${epochResult.epoch.artifacts.length} artifacts`);
+              }
+            } catch (err) {
+              console.error("[Hedera] Failed to force-submit epoch:", err);
+            }
+          }
+
+          // Log feedback event to HCS-10 outbound topic
+          if (hcs10Agent) {
+            hcs10Agent.logGovernanceEvent({
+              type: "decision",
+              change_id: body.change_id,
+              ruling: finalRuling,
+              risk_level: body.governor.risk_level,
+              timestamp: new Date().toISOString(),
+              metadata: {
+                human_outcome: body.human.outcome,
+                override_decision: body.human.override_decision,
+              },
+            });
+          }
+
         } catch (err) {
           console.error("Failed to write receipt after feedback:", err);
         }
@@ -1145,6 +1191,38 @@ async function startServer(): Promise<void> {
             })),
           })
         );
+        return;
+      }
+
+      // Force-submit epoch (for demo)
+      if (req.method === "POST" && pathname === "/hedera/epochs/submit") {
+        if (!hederaBackend) {
+          res.writeHead(400, { "content-type": "application/json" });
+          res.end(JSON.stringify({ error: "Epoch batching not configured" }));
+          return;
+        }
+
+        try {
+          const result = await hederaBackend.submitEpoch();
+          if (result) {
+            res.writeHead(200, { "content-type": "application/json" });
+            res.end(
+              JSON.stringify({
+                submitted: true,
+                epoch_id: result.epoch.epoch_id,
+                artifact_count: result.epoch.artifacts.length,
+                merkle_root: result.epoch.merkle_root,
+                hashscan_link: result.proof.link,
+              })
+            );
+          } else {
+            res.writeHead(200, { "content-type": "application/json" });
+            res.end(JSON.stringify({ submitted: false, message: "No events in current epoch" }));
+          }
+        } catch (err) {
+          res.writeHead(500, { "content-type": "application/json" });
+          res.end(JSON.stringify({ error: String(err) }));
+        }
         return;
       }
 
