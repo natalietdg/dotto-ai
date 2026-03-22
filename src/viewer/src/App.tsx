@@ -308,6 +308,11 @@ function App() {
         throw new Error(`Feedback submission failed: ${response.status}`);
       }
 
+      const feedbackData = await response.json();
+      if (feedbackData.receipt && pipelineDecision) {
+        setPipelineDecision({ ...pipelineDecision, receipt: feedbackData.receipt });
+      }
+
       setHumanFeedback(outcome);
       if (override) setOverrideAction(override);
 

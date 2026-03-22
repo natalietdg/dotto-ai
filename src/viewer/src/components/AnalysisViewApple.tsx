@@ -741,7 +741,14 @@ export default function AnalysisViewApple({
       const feedbackData = await feedbackRes.json();
       // Update decision with the new receipt (has real Hedera proof after authorize)
       if (feedbackData.receipt && decision) {
+        console.log("[Proof Chain] Updating receipt from feedback:", {
+          hasHederaProof: !!feedbackData.receipt.hedera_proof,
+          demo: feedbackData.receipt.hedera_proof?.demo,
+          hasNftProof: !!feedbackData.receipt.nft_proof,
+        });
         setDecision({ ...decision, receipt: feedbackData.receipt });
+      } else {
+        console.warn("[Proof Chain] No receipt in feedback response:", feedbackData);
       }
       setHumanFeedback(outcome);
       if (override) setOverrideAction(override);
@@ -1801,7 +1808,7 @@ export default function AnalysisViewApple({
                   <GeminiSparkle size={40} />
                 </div>
                 <h3>Ready for Analysis</h3>
-                <p>Click "Run Governance" to start AI analysis</p>
+                <p>Click &ldquo;Run Governance&rdquo; to start AI analysis</p>
               </div>
             )}
           </div>
