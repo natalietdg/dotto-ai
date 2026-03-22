@@ -146,6 +146,25 @@ interface InputArtifacts {
   decisions: unknown;
 }
 
+type EpochData = {
+  available: boolean;
+  submitted_epochs?: Array<{
+    epoch_id: number;
+    timestamp: string;
+    artifact_count: number;
+    merkle_root: string;
+    hashscan_link: string;
+  }>;
+};
+
+type AgentData = {
+  registered: boolean;
+  accountId: string | null;
+  inboundTopicId: string | null;
+  outboundTopicId: string | null;
+  network: string | null;
+};
+
 type TabId = "summary" | "context" | "systems";
 
 export default function AnalysisViewApple({
@@ -179,6 +198,24 @@ export default function AnalysisViewApple({
     type: "accepted" | "overridden";
     override?: "approve" | "block";
   } | null>(null);
+
+  // Proof chain state
+  const [epochData, setEpochData] = useState<EpochData | null>(null);
+  const [agentData, setAgentData] = useState<AgentData | null>(null);
+
+  // Fetch epoch + agent data when a decision arrives (proof chain is always visible)
+  useEffect(() => {
+    if (decision?.receipt && !epochData) {
+      Promise.all([fetch(apiUrl("/hedera/epochs")), fetch(apiUrl("/hedera/agent"))])
+        .then(async ([epochRes, agentRes]) => {
+          setEpochData(await epochRes.json());
+          setAgentData(await agentRes.json());
+        })
+        .catch(() => {
+          // Data will show as "Not available"
+        });
+    }
+  }, [decision]);
 
   // Schema Drift Simulator state
   const [simulatorMode, setSimulatorMode] = useState(false);
@@ -1271,7 +1308,7 @@ export default function AnalysisViewApple({
           <div className="tab-panel tab-panel--summary">
             {decision ? (
               <>
-                {/* Gemini Insight - The key observation, generated once and frozen */}
+                {/* 1. AI Insight + Recommendation — compact top section */}
                 <div
                   className={`gemini-insight ${humanFeedback ? "gemini-insight--superseded" : ""}`}
                 >
@@ -1280,7 +1317,6 @@ export default function AnalysisViewApple({
                     <h3>AI Insight</h3>
                   </div>
                   <p className="gemini-insight__text">
-                    {/* Use the insight field if available (dynamic from Gemini), otherwise fallback */}
                     {decision.insight ? (
                       decision.insight
                     ) : decision.auto_authorized ? (
@@ -1295,13 +1331,8 @@ export default function AnalysisViewApple({
                       decision.reasoning?.[0] || "Analysis complete."
                     )}
                   </p>
-                  <span className="gemini-insight__provenance">
-                    AI recommendation generated during analysis. Preserved as part of the governance
-                    record.
-                  </span>
                 </div>
 
-                {/* Gemini Recommendation - Not a judgment, superseded when human rules */}
                 <div
                   className={`gemini-recommendation ${humanFeedback ? "gemini-recommendation--superseded" : ""}`}
                 >
@@ -1318,7 +1349,355 @@ export default function AnalysisViewApple({
                   <span className="gemini-recommendation__risk">({decision.risk_level} risk)</span>
                 </div>
 
-                {/* Supporting Evidence - Detailed reasoning */}
+                {/* 2. VERIFIABLE PROOF CHAIN — the differentiator, always visible */}
+                {decision.receipt && (
+                  <div className="proof-chain proof-chain--primary">
+                    <div className="proof-chain-header">
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        <path d="M9 12l2 2 4-4" />
+                      </svg>
+                      <h3 className="proof-chain-title">Verifiable Proof Chain</h3>
+                      {decision.receipt.hedera_proof?.demo && (
+                        <span className="proof-chain-demo-badge">
+                          Hedera not configured — preview only
+                        </span>
+                      )}
+                    </div>
+                    <div className="proof-chain-steps">
+                      {/* Step 1: Receipt Signed */}
+                      <div className="proof-chain-step">
+                        <div className="proof-chain-step__dot proof-chain-step__dot--receipt" />
+                        <div className="proof-chain-step__content">
+                          <div className="proof-chain-step__label">Receipt Signed</div>
+                          <div className="proof-chain-step__fields">
+                            <div className="proof-chain-step__field">
+                              <span className="proof-chain-step__field-label">Algorithm</span>
+                              <span className="proof-chain-step__field-value">
+                                {decision.receipt.algorithm || "hmac-sha256"}
+                              </span>
+                            </div>
+                            <div className="proof-chain-step__field">
+                              <span className="proof-chain-step__field-label">Signature</span>
+                              <span className="proof-chain-step__field-value">
+                                {decision.receipt.signature.slice(0, 24)}...
+                              </span>
+                            </div>
+                            <div className="proof-chain-step__field">
+                              <span className="proof-chain-step__field-label">Issued</span>
+                              <span className="proof-chain-step__field-value">
+                                {new Date(
+                                  decision.receipt.issued_at || decision.receipt.timestamp || ""
+                                ).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="proof-chain-step__field">
+                              <span className="proof-chain-step__field-label">Artifacts Hash</span>
+                              <span className="proof-chain-step__field-value">
+                                {decision.receipt.artifacts_hash.slice(0, 24)}...
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Step 2: HCS Anchored */}
+                      <div
+                        className={`proof-chain-step ${!decision.receipt.hedera_proof || decision.receipt.hedera_proof.demo ? "proof-chain-step--inactive" : ""}`}
+                      >
+                        <div className="proof-chain-step__dot proof-chain-step__dot--hcs" />
+                        <div className="proof-chain-step__content">
+                          <div className="proof-chain-step__label">Anchored to Hedera (HCS)</div>
+                          {decision.receipt.hedera_proof && !decision.receipt.hedera_proof.demo ? (
+                            <div className="proof-chain-step__fields">
+                              <div className="proof-chain-step__field">
+                                <span className="proof-chain-step__field-label">Topic</span>
+                                <span className="proof-chain-step__field-value">
+                                  {decision.receipt.hedera_proof.topic_id}
+                                </span>
+                              </div>
+                              <div className="proof-chain-step__field">
+                                <span className="proof-chain-step__field-label">Sequence</span>
+                                <span className="proof-chain-step__field-value">
+                                  #{decision.receipt.hedera_proof.sequence_number}
+                                </span>
+                              </div>
+                              <div className="proof-chain-step__field">
+                                <span className="proof-chain-step__field-label">Transaction</span>
+                                <span className="proof-chain-step__field-value">
+                                  {decision.receipt.hedera_proof.transaction_id}
+                                </span>
+                              </div>
+                              <a
+                                href={decision.receipt.hedera_proof.hashscan_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="proof-chain-step__link"
+                              >
+                                Verify on Hashscan
+                                <svg
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                  <polyline points="15 3 21 3 21 9" />
+                                  <line x1="10" y1="14" x2="21" y2="3" />
+                                </svg>
+                              </a>
+                            </div>
+                          ) : (
+                            <span className="proof-chain-step__inactive-text">
+                              {decision.receipt.hedera_proof?.demo
+                                ? "Hedera credentials not configured"
+                                : "Not anchored"}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Step 3: NFT Minted */}
+                      <div
+                        className={`proof-chain-step ${!decision.receipt.nft_proof || decision.receipt.nft_proof.demo ? "proof-chain-step--inactive" : ""}`}
+                      >
+                        <div className="proof-chain-step__dot proof-chain-step__dot--nft" />
+                        <div className="proof-chain-step__content">
+                          <div className="proof-chain-step__label">NFT Receipt Minted</div>
+                          {decision.receipt.nft_proof && !decision.receipt.nft_proof.demo ? (
+                            <div className="proof-chain-step__fields">
+                              <div className="proof-chain-step__field">
+                                <span className="proof-chain-step__field-label">Token</span>
+                                <span className="proof-chain-step__field-value">
+                                  {decision.receipt.nft_proof.token_id}
+                                </span>
+                              </div>
+                              <div className="proof-chain-step__field">
+                                <span className="proof-chain-step__field-label">Serial</span>
+                                <span className="proof-chain-step__field-value">
+                                  #{decision.receipt.nft_proof.serial_number}
+                                </span>
+                              </div>
+                              <a
+                                href={decision.receipt.nft_proof.hashscan_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="proof-chain-step__link"
+                              >
+                                Verify on Hashscan
+                                <svg
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                  <polyline points="15 3 21 3 21 9" />
+                                  <line x1="10" y1="14" x2="21" y2="3" />
+                                </svg>
+                              </a>
+                            </div>
+                          ) : (
+                            <span className="proof-chain-step__inactive-text">
+                              {decision.receipt.nft_proof?.demo
+                                ? "Hedera credentials not configured"
+                                : "Not minted"}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Step 4: Agent Identity Verified */}
+                      {(() => {
+                        const agent =
+                          decision.receipt.agent_identity ||
+                          (agentData?.registered ? agentData : null);
+                        const isDemo = decision.receipt.agent_identity?.demo;
+                        return (
+                          <div
+                            className={`proof-chain-step ${!agent || isDemo ? "proof-chain-step--inactive" : ""}`}
+                          >
+                            <div className="proof-chain-step__dot proof-chain-step__dot--agent" />
+                            <div className="proof-chain-step__content">
+                              <div className="proof-chain-step__label">
+                                Agent Identity Verified (HCS-10)
+                              </div>
+                              {agent && !isDemo ? (
+                                <div className="proof-chain-step__fields">
+                                  <div className="proof-chain-step__field">
+                                    <span className="proof-chain-step__field-label">Account</span>
+                                    <span className="proof-chain-step__field-value">
+                                      {"account_id" in agent
+                                        ? (agent as { account_id: string }).account_id
+                                        : (agent as AgentData).accountId}
+                                    </span>
+                                  </div>
+                                  <div className="proof-chain-step__field">
+                                    <span className="proof-chain-step__field-label">Inbound</span>
+                                    <span className="proof-chain-step__field-value">
+                                      {"inbound_topic" in agent
+                                        ? (agent as { inbound_topic: string }).inbound_topic
+                                        : (agent as AgentData).inboundTopicId}
+                                    </span>
+                                  </div>
+                                  <div className="proof-chain-step__field">
+                                    <span className="proof-chain-step__field-label">Outbound</span>
+                                    <span className="proof-chain-step__field-value">
+                                      {"outbound_topic" in agent
+                                        ? (agent as { outbound_topic: string }).outbound_topic
+                                        : (agent as AgentData).outboundTopicId}
+                                    </span>
+                                  </div>
+                                  <div className="proof-chain-step__field">
+                                    <span className="proof-chain-step__field-label">Registry</span>
+                                    <span className="proof-chain-step__field-value">
+                                      {"registry" in agent
+                                        ? (agent as { registry: string }).registry
+                                        : "HOL"}
+                                    </span>
+                                  </div>
+                                  <a
+                                    href={`https://hashscan.io/testnet/account/${"account_id" in agent ? (agent as { account_id: string }).account_id : (agent as AgentData).accountId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="proof-chain-step__link"
+                                  >
+                                    Verify on Hashscan
+                                    <svg
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                    >
+                                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                      <polyline points="15 3 21 3 21 9" />
+                                      <line x1="10" y1="14" x2="21" y2="3" />
+                                    </svg>
+                                  </a>
+                                </div>
+                              ) : (
+                                <span className="proof-chain-step__inactive-text">
+                                  {isDemo ? "Agent not registered" : "Not registered"}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Step 5: Merkle Epoch */}
+                      {(() => {
+                        const lastEpoch = epochData?.submitted_epochs?.slice(-1)[0];
+                        return (
+                          <div
+                            className={`proof-chain-step ${!lastEpoch ? "proof-chain-step--inactive" : ""}`}
+                          >
+                            <div className="proof-chain-step__dot proof-chain-step__dot--epoch" />
+                            <div className="proof-chain-step__content">
+                              <div className="proof-chain-step__label">Merkle Epoch Batched</div>
+                              {lastEpoch ? (
+                                <div className="proof-chain-step__fields">
+                                  <div className="proof-chain-step__field">
+                                    <span className="proof-chain-step__field-label">Epoch</span>
+                                    <span className="proof-chain-step__field-value">
+                                      #{lastEpoch.epoch_id}
+                                    </span>
+                                  </div>
+                                  <div className="proof-chain-step__field">
+                                    <span className="proof-chain-step__field-label">Artifacts</span>
+                                    <span className="proof-chain-step__field-value">
+                                      {lastEpoch.artifact_count} batched
+                                    </span>
+                                  </div>
+                                  <div className="proof-chain-step__field">
+                                    <span className="proof-chain-step__field-label">
+                                      Merkle Root
+                                    </span>
+                                    <span className="proof-chain-step__field-value">
+                                      {lastEpoch.merkle_root.slice(0, 24)}...
+                                    </span>
+                                  </div>
+                                  <a
+                                    href={lastEpoch.hashscan_link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="proof-chain-step__link"
+                                  >
+                                    Verify on Hashscan
+                                    <svg
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                    >
+                                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                      <polyline points="15 3 21 3 21 9" />
+                                      <line x1="10" y1="14" x2="21" y2="3" />
+                                    </svg>
+                                  </a>
+                                </div>
+                              ) : (
+                                <span className="proof-chain-step__inactive-text">
+                                  No epochs submitted yet
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Step 6: Key Management */}
+                      <div
+                        className={`proof-chain-step ${!decision.receipt.kms_key_id ? "proof-chain-step--inactive" : ""}`}
+                      >
+                        <div className="proof-chain-step__dot proof-chain-step__dot--kms" />
+                        <div className="proof-chain-step__content">
+                          <div className="proof-chain-step__label">Key Management (AWS KMS)</div>
+                          {decision.receipt.kms_key_id ? (
+                            <div className="proof-chain-step__fields">
+                              <div className="proof-chain-step__field">
+                                <span className="proof-chain-step__field-label">Key ID</span>
+                                <span className="proof-chain-step__field-value">
+                                  {decision.receipt.kms_key_id.slice(0, 20)}...
+                                </span>
+                              </div>
+                              <div className="proof-chain-step__field">
+                                <span className="proof-chain-step__field-label">Curve</span>
+                                <span className="proof-chain-step__field-value">
+                                  ECC_SECG_P256K1 (secp256k1)
+                                </span>
+                              </div>
+                              <div className="proof-chain-step__field">
+                                <span className="proof-chain-step__field-label">Storage</span>
+                                <span className="proof-chain-step__field-value">
+                                  AWS CloudHSM (FIPS 140-2)
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="proof-chain-step__fields">
+                              <div className="proof-chain-step__field">
+                                <span className="proof-chain-step__field-label">Mode</span>
+                                <span className="proof-chain-step__field-value">
+                                  HMAC-SHA256 (development)
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Supporting Evidence — collapsible, below proof */}
                 {decision.thinking ? (
                   <div
                     className={`thinking-card ${humanFeedback ? "thinking-card--superseded" : ""}`}
@@ -1341,9 +1720,7 @@ export default function AnalysisViewApple({
                       <div className="thinking-card__content">
                         <ReactMarkdown>
                           {decision.thinking
-                            // Remove or rename the Judgment section - it's now handled by Gemini Recommendation
                             .replace(/## Judgment[\s\S]*?(?=##|$)/gi, "")
-                            // Clean up any double line breaks
                             .replace(/\n{3,}/g, "\n\n")}
                         </ReactMarkdown>
                       </div>
@@ -1364,6 +1741,39 @@ export default function AnalysisViewApple({
                     </ul>
                   </div>
                 ) : null}
+
+                {/* 4. Precedent Match — if applicable */}
+                {decision.auto_authorized && decision.precedent_match && (
+                  <div className="precedent-card">
+                    <div className="precedent-card__badge">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Precedent Match
+                    </div>
+                    <div className="precedent-card__details">
+                      <div className="precedent-detail">
+                        <span className="precedent-detail__label">Precedent Ruling</span>
+                        <span className="precedent-detail__value">
+                          receipt {decision.precedent_match.change_id.slice(0, 20)}...
+                        </span>
+                      </div>
+                      <div className="precedent-detail">
+                        <span className="precedent-detail__label">Similarity Score</span>
+                        <span className="precedent-detail__value">
+                          {Math.round(decision.precedent_match.similarity * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               <div className="empty-card">
@@ -1374,201 +1784,6 @@ export default function AnalysisViewApple({
                 <p>Click "Run Governance" to start AI analysis</p>
               </div>
             )}
-
-            {/* Auto-authorized precedent info */}
-            {decision?.auto_authorized && decision.precedent_match && (
-              <div className="precedent-card">
-                <div className="precedent-card__badge">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  Precedent Match
-                </div>
-                <div className="precedent-card__details">
-                  <div className="precedent-detail">
-                    <span className="precedent-detail__label">Precedent Ruling</span>
-                    <span className="precedent-detail__value">
-                      receipt {decision.precedent_match.change_id.slice(0, 20)}...
-                    </span>
-                  </div>
-                  <div className="precedent-detail">
-                    <span className="precedent-detail__label">Similarity Score</span>
-                    <span className="precedent-detail__value">
-                      {Math.round(decision.precedent_match.similarity * 100)}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Verification — Hedera Proof Chain */}
-            {decision?.receipt &&
-              (decision.receipt.hedera_proof ||
-                decision.receipt.nft_proof ||
-                decision.receipt.agent_identity) && (
-                <div className="hedera-proof-card">
-                  <div className="hedera-proof-card__header">
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                    </svg>
-                    <h3>Verification</h3>
-                    {decision.receipt.hedera_proof?.demo && (
-                      <span className="hedera-proof-card__demo-badge">
-                        Hedera not configured — preview only
-                      </span>
-                    )}
-                  </div>
-                  <div className="hedera-proof-card__steps">
-                    {/* Agent Identity — who decided */}
-                    {decision.receipt.agent_identity && (
-                      <a
-                        href={`https://hashscan.io/${decision.receipt.agent_identity.network || "testnet"}/account/${decision.receipt.agent_identity.account_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`hedera-proof-step hedera-proof-step--agent${decision.receipt.agent_identity.demo ? " hedera-proof-step--demo" : ""}`}
-                      >
-                        <span className="hedera-proof-step__icon">
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                            <circle cx="12" cy="7" r="4" />
-                          </svg>
-                        </span>
-                        <span className="hedera-proof-step__info">
-                          <span className="hedera-proof-step__label">
-                            {decision.receipt.agent_identity.demo
-                              ? "Agent — not registered"
-                              : "Agent Identity"}
-                          </span>
-                          <span className="hedera-proof-step__detail">
-                            {decision.receipt.agent_identity.account_id} (
-                            {decision.receipt.agent_identity.registry})
-                          </span>
-                        </span>
-                        <span className="hedera-proof-step__link">View on Hashscan</span>
-                      </a>
-                    )}
-                    {/* HCS Anchor — where proof lives */}
-                    {decision.receipt.hedera_proof && (
-                      <a
-                        href={decision.receipt.hedera_proof.hashscan_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`hedera-proof-step hedera-proof-step--hcs${decision.receipt.hedera_proof.demo ? " hedera-proof-step--demo" : ""}`}
-                      >
-                        <span className="hedera-proof-step__icon">
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                          </svg>
-                        </span>
-                        <span className="hedera-proof-step__info">
-                          <span className="hedera-proof-step__label">
-                            {decision.receipt.hedera_proof.demo
-                              ? "Consensus Record — not anchored"
-                              : "Consensus Record"}
-                          </span>
-                          <span className="hedera-proof-step__detail">
-                            {decision.receipt.hedera_proof.demo
-                              ? "Hedera credentials not configured"
-                              : `HCS Topic ${decision.receipt.hedera_proof.topic_id} #${decision.receipt.hedera_proof.sequence_number}`}
-                          </span>
-                        </span>
-                        <span className="hedera-proof-step__link">View on Hashscan</span>
-                      </a>
-                    )}
-                    {/* NFT Receipt — tokenized artifact */}
-                    {decision.receipt.nft_proof &&
-                      (decision.receipt.nft_proof.demo ? (
-                        <a
-                          href={decision.receipt.nft_proof.hashscan_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hedera-proof-step hedera-proof-step--nft hedera-proof-step--demo"
-                        >
-                          <span className="hedera-proof-step__icon">
-                            <svg
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                              <path d="M9 12l2 2 4-4" />
-                            </svg>
-                          </span>
-                          <span className="hedera-proof-step__info">
-                            <span className="hedera-proof-step__label">
-                              Receipt Token — not minted
-                            </span>
-                            <span className="hedera-proof-step__detail">
-                              Hedera credentials not configured
-                            </span>
-                          </span>
-                          <span className="hedera-proof-step__link">View on Hashscan</span>
-                        </a>
-                      ) : (
-                        <a
-                          href={decision.receipt.nft_proof.hashscan_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hedera-proof-step hedera-proof-step--nft"
-                        >
-                          <span className="hedera-proof-step__icon">
-                            <svg
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                              <path d="M9 12l2 2 4-4" />
-                            </svg>
-                          </span>
-                          <span className="hedera-proof-step__info">
-                            <span className="hedera-proof-step__label">Receipt Token</span>
-                            <span className="hedera-proof-step__detail">
-                              HTS Token {decision.receipt.nft_proof.token_id} #
-                              {decision.receipt.nft_proof.serial_number}
-                            </span>
-                          </span>
-                          <span className="hedera-proof-step__link">View on Hashscan</span>
-                        </a>
-                      ))}
-                  </div>
-                </div>
-              )}
           </div>
         )}
 

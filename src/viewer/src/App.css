@@ -970,6 +970,195 @@
   margin: 2px 0;
 }
 
+/* ===== Verifiable Proof Chain ===== */
+.proof-chain--primary {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 12px;
+  animation: proof-chain-in 0.3s ease-out;
+}
+
+.proof-chain-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.proof-chain-header svg {
+  color: #8b5cf6;
+  flex-shrink: 0;
+}
+
+.proof-chain-header .proof-chain-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.proof-chain-demo-badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--text-muted) 10%, transparent);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+@keyframes proof-chain-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.proof-chain-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-left: 4px;
+}
+
+.proof-chain-step {
+  display: flex;
+  gap: 14px;
+  padding-bottom: 20px;
+  position: relative;
+}
+
+.proof-chain-step:last-child {
+  padding-bottom: 0;
+}
+
+/* Vertical line connecting dots */
+.proof-chain-step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 14px;
+  bottom: 0;
+  width: 2px;
+  background: var(--border);
+}
+
+.proof-chain-step__dot {
+  width: 12px;
+  height: 12px;
+  min-width: 12px;
+  border-radius: 50%;
+  margin-top: 2px;
+  position: relative;
+  z-index: 1;
+}
+
+.proof-chain-step__dot--receipt {
+  background: var(--success);
+}
+.proof-chain-step__dot--hcs {
+  background: #8b5cf6;
+}
+.proof-chain-step__dot--nft {
+  background: #f59e0b;
+}
+.proof-chain-step__dot--epoch {
+  background: #3b82f6;
+}
+.proof-chain-step__dot--agent {
+  background: #06b6d4;
+}
+.proof-chain-step__dot--kms {
+  background: #f97316;
+}
+
+.proof-chain-step--inactive .proof-chain-step__dot {
+  background: var(--border);
+}
+
+.proof-chain-step__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.proof-chain-step__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.proof-chain-step--inactive .proof-chain-step__label {
+  color: var(--text-muted);
+}
+
+.proof-chain-step__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.proof-chain-step__field {
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.proof-chain-step__field-label {
+  color: var(--text-muted);
+  font-weight: 500;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.proof-chain-step__field-value {
+  color: var(--text-secondary);
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.proof-chain-step__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8b5cf6;
+  text-decoration: none;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, #8b5cf6 8%, transparent);
+  transition: all var(--transition-fast);
+}
+
+.proof-chain-step__link:hover {
+  color: #7c3aed;
+  background: color-mix(in srgb, #8b5cf6 15%, transparent);
+}
+
+.proof-chain-step__link svg {
+  width: 12px;
+  height: 12px;
+}
+
+.proof-chain-step__inactive-text {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* ===== Step Spinner ===== */
 .step-spinner {
   width: 10px;
