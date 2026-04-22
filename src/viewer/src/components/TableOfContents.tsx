@@ -9,6 +9,8 @@ const CONCEPTUAL_SECTIONS = [
   { id: "separation-of-powers", title: "Separation of Powers" },
   { id: "why-ai-review-is-not-governance", title: "Why AI Review is Not Governance" },
   { id: "how-it-works", title: "How It Works" },
+  { id: "why-hedera", title: "Why Hedera" },
+  { id: "governance-agent", title: "Governance Agent" },
 ];
 
 const DEEP_DIVE_SECTIONS = [
@@ -19,10 +21,14 @@ const DEEP_DIVE_SECTIONS = [
   { id: "governance-lifecycle", title: "Governance Lifecycle" },
   { id: "policy-rules", title: "Policy Rules" },
   { id: "authorization-receipt", title: "Authorization Receipt" },
+  { id: "hedera-proof-chain", title: "Hedera Proof Chain" },
   { id: "enforcement", title: "Enforcement" },
   { id: "human-authority", title: "Human Authority" },
   { id: "precedent", title: "Precedent" },
   { id: "precedent-matching", title: "Precedent Matching" },
+  { id: "trust-model", title: "Trust Model" },
+  { id: "economics", title: "Economics" },
+  { id: "comparison", title: "How Dotto Compares" },
 ];
 
 export default function TableOfContents({ viewMode }: TableOfContentsProps) {

@@ -358,7 +358,7 @@ function SeparationOfPowersFlow() {
         </svg>
       ),
       label: "Recommendation",
-      desc: "Gemini (Advisory)",
+      desc: "AI (Advisory)",
       badge: "AI Insight",
       color: "#9b72cb",
     },
@@ -615,7 +615,7 @@ export default function Whitepaper() {
                 <div className="core-loop__step">Drift Detected</div>
                 <div className="core-loop__arrow">↓</div>
                 <div className="core-loop__step core-loop__step--gemini">
-                  Gemini Insight <span className="core-loop__tag">Advisory</span>
+                  AI Insight <span className="core-loop__tag">Advisory</span>
                 </div>
                 <div className="core-loop__arrow">↓</div>
                 <div className="core-loop__step core-loop__step--human">
@@ -639,7 +639,7 @@ export default function Whitepaper() {
                   <div className="step-card__num">2</div>
                   <h3 className="step-card__title">Recommend</h3>
                   <p className="step-card__microcopy">Advisory only</p>
-                  <p className="step-card__desc">Gemini evaluates against policy + precedent.</p>
+                  <p className="step-card__desc">AI evaluates against policy + precedent.</p>
                 </div>
                 <div className="step-card step-card--primary">
                   <div className="step-card__num">3</div>
@@ -653,6 +653,156 @@ export default function Whitepaper() {
               <p className="lifecycle-note">
                 Enforcement is automatic and occurs after authorization.
               </p>
+            </section>
+
+            {/* Why Hedera */}
+            <section id="why-hedera" className="whitepaper__section whitepaper__section--visible">
+              <h2 className="section__title">Why Hedera</h2>
+              <p className="section__preface">
+                Governance receipts need a trust layer that no single organization controls.
+              </p>
+
+              <p className="section__body">
+                An attacker who compromises your CI/CD pipeline, logging infrastructure, and
+                internal databases can forge any approval. The proof must live{" "}
+                <strong>outside your blast radius</strong>.
+              </p>
+
+              <div className="hedera-features">
+                <div className="hedera-feature">
+                  <div className="hedera-feature__icon">⚡</div>
+                  <h3 className="hedera-feature__title">Fast Finality</h3>
+                  <p className="hedera-feature__desc">
+                    3–5 second consensus. No forks. Receipts anchored before CI finishes.
+                  </p>
+                </div>
+                <div className="hedera-feature">
+                  <div className="hedera-feature__icon">💰</div>
+                  <h3 className="hedera-feature__title">Low Cost</h3>
+                  <p className="hedera-feature__desc">
+                    $0.0001 per HCS message. Epoch batching reduces full receipts to ~$0.0015 each.
+                  </p>
+                </div>
+                <div className="hedera-feature">
+                  <div className="hedera-feature__icon">🔍</div>
+                  <h3 className="hedera-feature__title">Publicly Verifiable</h3>
+                  <p className="hedera-feature__desc">
+                    Every receipt is auditable on{" "}
+                    <a
+                      href="https://hashscan.io/testnet/account/0.0.8145658"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hedera-feature__link"
+                    >
+                      Hashscan
+                    </a>
+                    . No proprietary viewer needed.
+                  </p>
+                </div>
+                <div className="hedera-feature">
+                  <div className="hedera-feature__icon">🤖</div>
+                  <h3 className="hedera-feature__title">Agent-Native</h3>
+                  <p className="hedera-feature__desc">
+                    HCS-10 gives Dotto an on-chain identity. Other agents can discover and verify
+                    governance decisions autonomously.
+                  </p>
+                </div>
+              </div>
+
+              <div className="hedera-services">
+                <h3 className="hedera-services__title">4 Hedera Services, 1 Protocol</h3>
+                <div className="hedera-services__flow">
+                  <div className="hedera-service-card">
+                    <span className="hedera-service-card__label">HCS</span>
+                    <span className="hedera-service-card__desc">Receipt anchoring</span>
+                  </div>
+                  <div className="hedera-services__arrow">→</div>
+                  <div className="hedera-service-card">
+                    <span className="hedera-service-card__label">HTS</span>
+                    <span className="hedera-service-card__desc">NFT minting</span>
+                  </div>
+                  <div className="hedera-services__arrow">→</div>
+                  <div className="hedera-service-card">
+                    <span className="hedera-service-card__label">HCS-10</span>
+                    <span className="hedera-service-card__desc">Agent identity</span>
+                  </div>
+                  <div className="hedera-services__arrow">→</div>
+                  <div className="hedera-service-card">
+                    <span className="hedera-service-card__label">Epoch</span>
+                    <span className="hedera-service-card__desc">Merkle batching</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Governance Agent */}
+            <section
+              id="governance-agent"
+              className="whitepaper__section whitepaper__section--visible"
+            >
+              <h2 className="section__title">Governance Agent</h2>
+              <p className="section__preface">
+                Dotto is not just a library. It runs as an autonomous agent on Hedera.
+              </p>
+
+              <div className="agent-identity">
+                <div className="agent-identity__card">
+                  <div className="agent-identity__header">
+                    <span className="agent-identity__status">● Registered</span>
+                    <span className="agent-identity__protocol">HCS-10</span>
+                  </div>
+                  <div className="agent-identity__details">
+                    <div className="agent-identity__row">
+                      <span className="agent-identity__key">Account</span>
+                      <a
+                        href="https://hashscan.io/testnet/account/0.0.8145658"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="agent-identity__value agent-identity__value--link"
+                      >
+                        0.0.8145658
+                      </a>
+                    </div>
+                    <div className="agent-identity__row">
+                      <span className="agent-identity__key">Profile Topic</span>
+                      <a
+                        href="https://hashscan.io/testnet/account/0.0.8145658"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="agent-identity__value agent-identity__value--link"
+                      >
+                        0.0.8145666
+                      </a>
+                    </div>
+                    <div className="agent-identity__row">
+                      <span className="agent-identity__key">Registry</span>
+                      <span className="agent-identity__value">HOL (Hedera Open Ledger)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p className="section__body">Other agents can:</p>
+              <div className="agent-capabilities">
+                <div className="agent-capability">
+                  <span className="agent-capability__icon">🔎</span>
+                  <span className="agent-capability__text">
+                    <strong>Discover</strong> Dotto via the HOL Registry
+                  </span>
+                </div>
+                <div className="agent-capability">
+                  <span className="agent-capability__icon">📨</span>
+                  <span className="agent-capability__text">
+                    <strong>Request</strong> governance reviews via HCS-10 messaging
+                  </span>
+                </div>
+                <div className="agent-capability">
+                  <span className="agent-capability__icon">✅</span>
+                  <span className="agent-capability__text">
+                    <strong>Verify</strong> decisions by checking HCS anchors and NFT proofs
+                  </span>
+                </div>
+              </div>
             </section>
 
             {/* Closing - Overview */}
@@ -683,11 +833,31 @@ export default function Whitepaper() {
             >
               <h2 className="section__title">What is Dotto?</h2>
               <div className="content-block">
-                <p>Dotto is a governor between code and production.</p>
-                <p>It evaluates drift against policy and precedent.</p>
+                <p>Dotto governs the transition between code and production.</p>
+                <p>It evaluates detected drift against policy rules and historical precedent.</p>
                 <p>
                   <strong>Only humans authorize outcomes.</strong>
                 </p>
+              </div>
+
+              <div className="primitive-block">
+                <div className="primitive-block__item">
+                  <span className="primitive-block__label">Bitcoin</span>
+                  <span className="primitive-block__arrow">→</span>
+                  <span className="primitive-block__value">verifiable money</span>
+                </div>
+                <div className="primitive-block__item">
+                  <span className="primitive-block__label">Ethereum</span>
+                  <span className="primitive-block__arrow">→</span>
+                  <span className="primitive-block__value">verifiable computation</span>
+                </div>
+                <div className="primitive-block__item primitive-block__item--highlight">
+                  <span className="primitive-block__label">Dotto</span>
+                  <span className="primitive-block__arrow">→</span>
+                  <span className="primitive-block__value">
+                    verifiable deployment authorization
+                  </span>
+                </div>
               </div>
             </section>
 
@@ -703,9 +873,9 @@ export default function Whitepaper() {
                   <Jargon definition="The difference between your current code and a baseline. Detected automatically.">
                     <strong>Drift</strong>
                   </Jargon>{" "}
-                  refers to the difference between your current code and a baseline. When you modify
-                  schemas, APIs, or data structures, dotto detects these changes and classifies them
-                  as{" "}
+                  refers to the difference between a system's current state and its baseline. When
+                  you modify schemas, APIs, or data structures, dotto detects these changes and
+                  classifies them as{" "}
                   <Jargon definition="A change that could break downstream consumers, like renaming a field.">
                     <strong>breaking</strong>
                   </Jargon>{" "}
@@ -742,7 +912,7 @@ export default function Whitepaper() {
             >
               <h2 className="section__title">Scope of Detection</h2>
               <p className="section__preface">
-                Dotto only governs where teams have legitimate authority.
+                Dotto governs changes only within service boundaries where teams have authority.
               </p>
               <div className="content-block">
                 <p>
@@ -770,7 +940,8 @@ export default function Whitepaper() {
             >
               <h2 className="section__title">Intent-Aware Governance</h2>
               <p className="section__preface">
-                Drift tells us <em>what</em> changed. Intent tells us <em>whether it should</em>.
+                Drift tells us <em>what</em> changed. Intent determines{" "}
+                <em>whether the change is valid</em>.
               </p>
               <div className="content-block">
                 <p>
@@ -814,7 +985,7 @@ export default function Whitepaper() {
                 </div>
               </div>
               <p className="section__note">
-                Gemini analyzes intent alignment. Humans authorize when intent is ambiguous.
+                AI analyzes intent alignment. Humans authorize when intent is ambiguous.
               </p>
             </section>
 
@@ -840,7 +1011,7 @@ export default function Whitepaper() {
                   <div className="step-card__num">2</div>
                   <h3 className="step-card__title">Recommend</h3>
                   <p className="step-card__microcopy">Advisory only — cannot act</p>
-                  <p className="step-card__desc">Gemini evaluates against policy + precedent.</p>
+                  <p className="step-card__desc">AI evaluates against policy + precedent.</p>
                   <div className="step-card__artifacts">
                     <code>policy.json</code>
                     <code>decisions.json</code>
@@ -857,10 +1028,18 @@ export default function Whitepaper() {
                     <code>dotto run --ci</code>
                   </div>
                 </div>
+                <div className="step-card">
+                  <div className="step-card__num">4</div>
+                  <h3 className="step-card__title">Enforce</h3>
+                  <p className="step-card__microcopy">Automatic — no bypass</p>
+                  <p className="step-card__desc">
+                    Receipt gates deployment. No receipt, no production change.
+                  </p>
+                  <div className="step-card__code">
+                    <code>dotto verify</code>
+                  </div>
+                </div>
               </div>
-              <p className="lifecycle-note">
-                Enforcement is automatic and occurs after authorization.
-              </p>
 
               {/* Technical Deep Dive */}
               <div className="deep-dive-content">
@@ -902,7 +1081,7 @@ export default function Whitepaper() {
             <ScrollRevealSection id="policy-rules" className="whitepaper__section">
               <h2 className="section__title">Policy Rules</h2>
               <p className="section__constraint">
-                Policy rules constrain outcomes — never authorize.
+                Policy rules constrain possible outcomes — they do not authorize changes.
               </p>
               <div className="policy-rules__grid">
                 <div className="policy-rule-card">
@@ -943,23 +1122,150 @@ export default function Whitepaper() {
                 <Jargon definition="A cryptographically signed artifact that proves a human authorized this specific change.">
                   receipt
                 </Jargon>{" "}
-                is not evidence. It is the approval.
+                is not a log entry — it is the authorization itself.
               </p>
               <div className="rules-example" style={{ marginTop: "20px" }}>
                 <pre>{`{
   "change_id": "pr-847-abc123",
   "ruling": "approve",
   "artifact_hash": "sha256:e3b0c44298fc...",
-  "signature": "dotto:v1:abc123..."
+  "signature": "hmac-sha256:9f86d08...",
+  "agent_identity": {
+    "account_id": "0.0.8145658",
+    "registry": "HOL",
+    "network": "testnet"
+  },
+  "hedera_proof": {
+    "topic_id": "0.0.8145666",
+    "sequence_number": "42",
+    "hashscan_link": "hashscan.io/testnet/..."
+  },
+  "nft_proof": {
+    "token_id": "0.0.7224100",
+    "serial_number": "1"
+  }
 }`}</pre>
               </div>
               <div className="content-block" style={{ marginTop: "20px" }}>
                 <p>
                   <strong>Receipts are capabilities, not logs.</strong> Without a valid receipt,
-                  production cannot change.
+                  production cannot change. Each receipt is anchored to Hedera for immutable,
+                  third-party verifiable proof.
                 </p>
               </div>
               <ReceiptDemo />
+            </section>
+
+            {/* Hedera Proof Chain */}
+            <section
+              id="hedera-proof-chain"
+              className="whitepaper__section whitepaper__section--visible"
+            >
+              <h2 className="section__title">Hedera Proof Chain</h2>
+              <p className="section__preface">
+                Every authorization is anchored to{" "}
+                <Jargon definition="A public, permissioned distributed ledger that provides immutable, timestamped consensus.">
+                  Hedera
+                </Jargon>{" "}
+                to create tamper-proof, third-party verifiable proof.
+              </p>
+
+              <div className="core-loop">
+                <div className="core-loop__step">Governance Decision</div>
+                <div className="core-loop__arrow">↓</div>
+                <div className="core-loop__step" style={{ borderColor: "rgba(139, 92, 246, 0.3)" }}>
+                  HCS Anchor <span className="core-loop__tag">Immutable</span>
+                </div>
+                <div className="core-loop__arrow">↓</div>
+                <div className="core-loop__step" style={{ borderColor: "rgba(245, 158, 11, 0.3)" }}>
+                  NFT Mint <span className="core-loop__tag">On-Chain</span>
+                </div>
+                <div className="core-loop__arrow">↓</div>
+                <div className="core-loop__step" style={{ borderColor: "rgba(6, 182, 212, 0.3)" }}>
+                  Epoch Batch <span className="core-loop__tag">Merkle Root</span>
+                </div>
+              </div>
+
+              <div className="steps-grid" style={{ marginTop: "24px" }}>
+                <div className="step-card">
+                  <div className="step-card__num" style={{ background: "#8b5cf6", color: "white" }}>
+                    1
+                  </div>
+                  <h3 className="step-card__title">HCS Anchor</h3>
+                  <p className="step-card__desc">
+                    Receipt posted to Hedera Consensus Service topic. Immutable, timestamped,
+                    verifiable on Hashscan.
+                  </p>
+                </div>
+                <div className="step-card">
+                  <div className="step-card__num" style={{ background: "#f59e0b", color: "white" }}>
+                    2
+                  </div>
+                  <h3 className="step-card__title">NFT Mint</h3>
+                  <p className="step-card__desc">
+                    Approved receipts minted as HTS NFTs. Each governance decision becomes a unique,
+                    transferable on-chain token.
+                  </p>
+                </div>
+                <div className="step-card">
+                  <div className="step-card__num" style={{ background: "#06b6d4", color: "white" }}>
+                    3
+                  </div>
+                  <h3 className="step-card__title">Epoch Batch</h3>
+                  <p className="step-card__desc">
+                    Multiple decisions batched into epochs. Single Merkle root posted to HCS —
+                    cost-efficient and auditable.
+                  </p>
+                </div>
+              </div>
+
+              <div className="content-block" style={{ marginTop: "20px" }}>
+                <h4>Agent Identity (HCS-10)</h4>
+                <p>
+                  Dotto registers as an{" "}
+                  <Jargon definition="An autonomous AI agent registered on the Hashgraph Online (HOL) registry, discoverable and contactable via HCS-10 protocol.">
+                    HCS-10 agent
+                  </Jargon>{" "}
+                  on the HOL registry. Every receipt includes the agent&apos;s cryptographic
+                  identity — proving <em>which</em> agent made the decision, not just <em>what</em>{" "}
+                  was decided.
+                </p>
+                <p style={{ marginTop: "12px" }}>
+                  Other agents can discover dotto, request governance reviews via HCS-10 messaging,
+                  and receive assessments — enabling{" "}
+                  <strong>autonomous agent-to-agent governance</strong>.
+                </p>
+              </div>
+
+              <div className="content-block" style={{ marginTop: "16px" }}>
+                <h4>Why Hedera?</h4>
+                <div className="failure-modes">
+                  <div className="failure-mode">
+                    <span className="failure-mode__trigger">Finality</span>
+                    <span className="failure-mode__arrow">→</span>
+                    <span className="failure-mode__outcome">3-5 seconds, no forks</span>
+                  </div>
+                  <div className="failure-mode">
+                    <span className="failure-mode__trigger">Cost</span>
+                    <span className="failure-mode__arrow">→</span>
+                    <span className="failure-mode__outcome">$0.0001 per HCS message</span>
+                  </div>
+                  <div className="failure-mode">
+                    <span className="failure-mode__trigger">Auditability</span>
+                    <span className="failure-mode__arrow">→</span>
+                    <span className="failure-mode__outcome">
+                      Public mirror nodes, Hashscan explorer
+                    </span>
+                  </div>
+                  <div className="failure-mode">
+                    <span className="failure-mode__trigger">Governance-grade</span>
+                    <span className="failure-mode__arrow">→</span>
+                    <span className="failure-mode__outcome">
+                      Council-governed, enterprise-ready
+                    </span>
+                  </div>
+                </div>
+              </div>
             </section>
 
             {/* Enforcement */}
@@ -1041,7 +1347,8 @@ export default function Whitepaper() {
                   <Jargon definition="A past decision that automatically applies to similar future changes.">
                     <strong>binding precedent</strong>
                   </Jargon>
-                  .
+                  . Future changes are evaluated against these precedents to determine whether they
+                  can be auto-authorized.
                 </p>
                 <p>
                   Matching changes are{" "}
@@ -1093,6 +1400,280 @@ export default function Whitepaper() {
               <SimilarityCalculator />
             </section>
 
+            {/* Trust Model */}
+            <ScrollRevealSection
+              id="trust-model"
+              className="whitepaper__section whitepaper__section--alt"
+            >
+              <h2 className="section__title">Trust Model</h2>
+              <p className="section__preface">
+                Dotto is explicit about what it trusts and what it doesn't.
+              </p>
+
+              <div className="trust-grid">
+                <div className="trust-card trust-card--trusted">
+                  <h3 className="trust-card__title">Trusted</h3>
+                  <ul className="trust-card__list">
+                    <li>
+                      <strong>Git history</strong> — diffs are computed from actual committed state
+                    </li>
+                    <li>
+                      <strong>Hedera consensus</strong> — HCS messages are immutable once submitted
+                    </li>
+                    <li>
+                      <strong>Cryptographic signatures</strong> — HMAC-SHA256 or AWS KMS ECDSA
+                    </li>
+                    <li>
+                      <strong>Human judgment</strong> — final authority is always a person
+                    </li>
+                  </ul>
+                </div>
+                <div className="trust-card trust-card--untrusted">
+                  <h3 className="trust-card__title">Not Trusted</h3>
+                  <ul className="trust-card__list">
+                    <li>
+                      <strong>AI output</strong> — recommendations are advisory and never binding
+                    </li>
+                    <li>
+                      <strong>Mutable logs</strong> — logs can be edited; receipts cannot
+                    </li>
+                    <li>
+                      <strong>Self-reported compliance</strong> — assertion without proof is
+                      insufficient
+                    </li>
+                    <li>
+                      <strong>Implicit authorization</strong> — absence of objection is not approval
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="content-block" style={{ marginTop: "24px" }}>
+                <h4>Trust Boundaries</h4>
+                <p>
+                  Each layer of the system has a defined trust boundary. Detection trusts only
+                  deterministic code analysis. Recommendation trusts AI as a signal, not an
+                  authority. Authorization trusts only explicit human action. Enforcement trusts
+                  only cryptographically valid receipts.
+                </p>
+              </div>
+
+              <div className="trust-flow">
+                <div className="trust-flow__step">
+                  <span className="trust-flow__label">Detection</span>
+                  <span className="trust-flow__trust">Trusts: git diff</span>
+                </div>
+                <div className="trust-flow__arrow">→</div>
+                <div className="trust-flow__step">
+                  <span className="trust-flow__label">Recommendation</span>
+                  <span className="trust-flow__trust">Trusts: policy + precedent</span>
+                </div>
+                <div className="trust-flow__arrow">→</div>
+                <div className="trust-flow__step">
+                  <span className="trust-flow__label">Authorization</span>
+                  <span className="trust-flow__trust">Trusts: human only</span>
+                </div>
+                <div className="trust-flow__arrow">→</div>
+                <div className="trust-flow__step">
+                  <span className="trust-flow__label">Enforcement</span>
+                  <span className="trust-flow__trust">Trusts: valid receipt</span>
+                </div>
+              </div>
+
+              <p className="section__note">
+                No single layer can authorize a production change alone. Authority requires passing
+                through all four boundaries.
+              </p>
+            </ScrollRevealSection>
+
+            {/* Economics */}
+            <ScrollRevealSection id="economics" className="whitepaper__section">
+              <h2 className="section__title">Economics</h2>
+              <p className="section__preface">
+                Governance should become cheaper over time, not more expensive.
+              </p>
+
+              <div className="steps-grid steps-grid--3col">
+                <div className="econ-card">
+                  <div className="econ-card__value">$0.0001</div>
+                  <div className="econ-card__label">per HCS message</div>
+                  <p className="econ-card__desc">
+                    Each governance decision anchored to Hedera Consensus Service
+                  </p>
+                </div>
+                <div className="econ-card">
+                  <div className="econ-card__value">$0.02</div>
+                  <div className="econ-card__label">per NFT mint</div>
+                  <p className="econ-card__desc">
+                    Approved receipts minted as HTS tokens for on-chain proof
+                  </p>
+                </div>
+                <div className="econ-card">
+                  <div className="econ-card__value">~$0.05</div>
+                  <div className="econ-card__label">per full governance cycle</div>
+                  <p className="econ-card__desc">
+                    HCS anchor + NFT mint + epoch batch for complete provenance
+                  </p>
+                </div>
+              </div>
+
+              <div className="content-block" style={{ marginTop: "24px" }}>
+                <h4>Epoch Batching</h4>
+                <p>
+                  Instead of anchoring every decision individually, dotto batches governance events
+                  into <strong>epochs</strong>. Multiple decisions are combined into a single Merkle
+                  tree, and only the root hash is posted to HCS.
+                </p>
+                <p style={{ marginTop: "12px" }}>
+                  A team making 50 governance decisions per day pays for 50 individual HCS messages{" "}
+                  <em>or</em> a single epoch root — reducing on-chain cost by up to{" "}
+                  <strong>98%</strong> while maintaining identical proof guarantees. Any individual
+                  receipt can be verified against the Merkle root.
+                </p>
+              </div>
+
+              <div className="econ-comparison" style={{ marginTop: "24px" }}>
+                <h4 className="econ-comparison__title">Cost at Scale</h4>
+                <div className="econ-comparison__table">
+                  <div className="econ-comparison__row econ-comparison__row--header">
+                    <span>Decisions/month</span>
+                    <span>Without batching</span>
+                    <span>With epochs</span>
+                  </div>
+                  <div className="econ-comparison__row">
+                    <span>100</span>
+                    <span>$2.10</span>
+                    <span>$0.15</span>
+                  </div>
+                  <div className="econ-comparison__row">
+                    <span>1,000</span>
+                    <span>$21.00</span>
+                    <span>$0.65</span>
+                  </div>
+                  <div className="econ-comparison__row">
+                    <span>10,000</span>
+                    <span>$210.00</span>
+                    <span>$3.50</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="content-block" style={{ marginTop: "24px" }}>
+                <h4>Precedent Reduces Cost Further</h4>
+                <p>
+                  As the system accumulates precedent, more changes are auto-authorized — meaning
+                  fewer decisions require AI evaluation or human review. Governance gets cheaper and
+                  faster the longer you use it.
+                </p>
+              </div>
+            </ScrollRevealSection>
+
+            {/* Comparison */}
+            <ScrollRevealSection
+              id="comparison"
+              className="whitepaper__section whitepaper__section--alt"
+            >
+              <h2 className="section__title">How Dotto Compares</h2>
+              <p className="section__preface">
+                Existing approaches solve part of the problem. Dotto addresses the gap.
+              </p>
+
+              <div className="comparison-table">
+                <div className="comparison-table__row comparison-table__row--header">
+                  <span className="comparison-table__cell">Approach</span>
+                  <span className="comparison-table__cell">Detects drift</span>
+                  <span className="comparison-table__cell">AI insight</span>
+                  <span className="comparison-table__cell">Human authority</span>
+                  <span className="comparison-table__cell">Immutable proof</span>
+                  <span className="comparison-table__cell">Gets cheaper</span>
+                </div>
+                <div className="comparison-table__row">
+                  <span className="comparison-table__cell comparison-table__cell--label">
+                    Audit logs
+                  </span>
+                  <span className="comparison-table__cell comparison-table__cell--no">-</span>
+                  <span className="comparison-table__cell comparison-table__cell--no">-</span>
+                  <span className="comparison-table__cell comparison-table__cell--no">-</span>
+                  <span className="comparison-table__cell comparison-table__cell--no">Mutable</span>
+                  <span className="comparison-table__cell comparison-table__cell--no">-</span>
+                </div>
+                <div className="comparison-table__row">
+                  <span className="comparison-table__cell comparison-table__cell--label">
+                    PR review bots
+                  </span>
+                  <span className="comparison-table__cell comparison-table__cell--partial">
+                    Partial
+                  </span>
+                  <span className="comparison-table__cell comparison-table__cell--yes">Yes</span>
+                  <span className="comparison-table__cell comparison-table__cell--no">-</span>
+                  <span className="comparison-table__cell comparison-table__cell--no">-</span>
+                  <span className="comparison-table__cell comparison-table__cell--no">-</span>
+                </div>
+                <div className="comparison-table__row">
+                  <span className="comparison-table__cell comparison-table__cell--label">
+                    CI gates
+                  </span>
+                  <span className="comparison-table__cell comparison-table__cell--yes">Yes</span>
+                  <span className="comparison-table__cell comparison-table__cell--no">-</span>
+                  <span className="comparison-table__cell comparison-table__cell--partial">
+                    Manual
+                  </span>
+                  <span className="comparison-table__cell comparison-table__cell--no">-</span>
+                  <span className="comparison-table__cell comparison-table__cell--no">-</span>
+                </div>
+                <div className="comparison-table__row">
+                  <span className="comparison-table__cell comparison-table__cell--label">
+                    DAO governance
+                  </span>
+                  <span className="comparison-table__cell comparison-table__cell--no">-</span>
+                  <span className="comparison-table__cell comparison-table__cell--no">-</span>
+                  <span className="comparison-table__cell comparison-table__cell--yes">Yes</span>
+                  <span className="comparison-table__cell comparison-table__cell--yes">Yes</span>
+                  <span className="comparison-table__cell comparison-table__cell--no">-</span>
+                </div>
+                <div className="comparison-table__row comparison-table__row--highlight">
+                  <span className="comparison-table__cell comparison-table__cell--label">
+                    Dotto
+                  </span>
+                  <span className="comparison-table__cell comparison-table__cell--yes">Yes</span>
+                  <span className="comparison-table__cell comparison-table__cell--yes">Yes</span>
+                  <span className="comparison-table__cell comparison-table__cell--yes">Yes</span>
+                  <span className="comparison-table__cell comparison-table__cell--yes">Yes</span>
+                  <span className="comparison-table__cell comparison-table__cell--yes">Yes</span>
+                </div>
+              </div>
+
+              <div className="content-block" style={{ marginTop: "24px" }}>
+                <h4>Why Not Just Logs?</h4>
+                <p>
+                  Logs record that something happened. Receipts prove that something was{" "}
+                  <em>authorized</em>. Logs are mutable — receipts are cryptographically signed and
+                  optionally anchored to a public ledger. An attacker who compromises your logging
+                  infrastructure cannot forge a dotto receipt without the signing key.
+                </p>
+              </div>
+
+              <div className="content-block" style={{ marginTop: "16px" }}>
+                <h4>Why Not Just AI Review?</h4>
+                <p>
+                  AI review tools analyze code and suggest improvements. They do not{" "}
+                  <em>authorize</em> production changes. There is no receipt, no enforcement gate,
+                  no immutable record. When an AI-reviewed PR causes an incident, there is no proof
+                  of what was evaluated or who approved it.
+                </p>
+              </div>
+
+              <div className="content-block" style={{ marginTop: "16px" }}>
+                <h4>Why Not a DAO?</h4>
+                <p>
+                  DAOs provide on-chain voting and execution. They are designed for protocol
+                  governance, not deployment authorization. A DAO vote for every PR is impractical.
+                  Dotto combines AI-speed analysis with human-authority decisions and on-chain proof
+                  — without requiring a vote for every change.
+                </p>
+              </div>
+            </ScrollRevealSection>
+
             {/* Closing - Technical */}
             <section className="whitepaper__section whitepaper__section--closing whitepaper__section--visible">
               <div className="cta-section">
@@ -1111,7 +1692,7 @@ export default function Whitepaper() {
 
         {/* Footer */}
         <footer className="whitepaper__footer">
-          <p>Built for the Gemini 3 Hackathon</p>
+          <p>AI-powered governance anchored on Hedera</p>
         </footer>
       </div>
     </div>

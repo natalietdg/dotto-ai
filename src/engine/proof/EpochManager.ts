@@ -26,6 +26,7 @@ export class EpochManager {
   private currentEpoch: EpochArtifact[] = [];
   private epochCounter: number = 0;
   private epochInterval: number = 15 * 60 * 1000; // 15 minutes default
+  private epochHistory: Epoch[] = [];
 
   constructor(intervalMinutes: number = 15) {
     this.epochInterval = intervalMinutes * 60 * 1000;
@@ -107,7 +108,8 @@ export class EpochManager {
       merkle_tree: tree,
     };
 
-    // Reset for next epoch
+    // Store in history and reset for next epoch
+    this.epochHistory.push(epoch);
     this.currentEpoch = [];
 
     return epoch;
@@ -224,6 +226,38 @@ export class EpochManager {
       totalEpochs: this.epochCounter,
       currentEpochSize: this.currentEpoch.length,
       intervalMinutes: this.epochInterval / (60 * 1000),
+    };
+  }
+
+  /**
+   * Get all finalized epochs.
+   */
+  getEpochHistory(): Epoch[] {
+    return [...this.epochHistory];
+  }
+
+  /**
+   * Serialize epoch state for API responses.
+   */
+  toJSON(): {
+    stats: ReturnType<EpochManager["getStats"]>;
+    history: Array<{
+      epoch_id: number;
+      timestamp: string;
+      artifact_count: number;
+      merkle_root: string;
+    }>;
+    current_batch_size: number;
+  } {
+    return {
+      stats: this.getStats(),
+      history: this.epochHistory.map((e) => ({
+        epoch_id: e.epoch_id,
+        timestamp: e.timestamp,
+        artifact_count: e.artifacts.length,
+        merkle_root: e.merkle_root,
+      })),
+      current_batch_size: this.currentEpoch.length,
     };
   }
 }

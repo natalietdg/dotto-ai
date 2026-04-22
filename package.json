@@ -1,8 +1,66 @@
 {
   "name": "dotto-ai",
   "version": "0.1.0",
-  "private": true,
+  "description": "Governance protocol for software change. AI assists. Humans authorize. Receipts enforce.",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./engine": {
+      "import": "./dist/engine/dotto.js",
+      "types": "./dist/engine/dotto.d.ts"
+    },
+    "./crypto": {
+      "import": "./dist/crypto/receipt.js",
+      "types": "./dist/crypto/receipt.d.ts"
+    },
+    "./governor": {
+      "import": "./dist/gemini/governor.js",
+      "types": "./dist/gemini/governor.d.ts"
+    },
+    "./proof": {
+      "import": "./dist/engine/proof/index.js",
+      "types": "./dist/engine/proof/index.d.ts"
+    },
+    "./hcs10": {
+      "import": "./dist/engine/hcs10/HCS10AgentManager.js",
+      "types": "./dist/engine/hcs10/HCS10AgentManager.d.ts"
+    },
+    "./types": {
+      "import": "./dist/engine/core/types.js",
+      "types": "./dist/engine/core/types.d.ts"
+    }
+  },
+  "bin": {
+    "dotto-verify": "./dist/cli/dotto-verify.js",
+    "dotto-generate": "./dist/cli/dotto-generate.js",
+    "dotto-scan": "./dist/cli/dotto-local-scan.js"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    ".env.example"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "governance",
+    "drift-detection",
+    "schema-diff",
+    "authorization",
+    "receipts",
+    "hedera",
+    "hcs",
+    "ai-governance",
+    "ci-cd",
+    "deployment-gate"
+  ],
+  "license": "MIT",
   "scripts": {
     "dev": "tsx src/server.ts",
     "dev:viewer": "npm run dev --prefix src/viewer",
@@ -15,11 +73,15 @@
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,json,css,md}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,json,css,md}\""
+    "format:check": "prettier --check \"**/*.{ts,tsx,json,css,md}\"",
+    "verify-hedera": "tsx scripts/test-hedera-integration.ts",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
+    "@aws-sdk/client-kms": "^3.1004.0",
     "@google/generative-ai": "^0.21.0",
     "@hashgraph/sdk": "^2.51.0",
+    "@hashgraphonline/standards-sdk": "^0.1.165",
     "dotenv": "^17.2.3",
     "fast-glob": "^3.3.2",
     "js-yaml": "^4.1.0"

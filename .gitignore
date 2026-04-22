@@ -20,10 +20,11 @@ dist/
 Thumbs.db
 
 # Dotto artifacts (regenerated on each run)
-graph.json
-drift.json
-impact.json
-intent.json
+# NOTE: artifacts/ folder is NOT ignored so it deploys to Render
+# graph.json
+# drift.json
+# impact.json
+# intent.json
 
 # Claude
 .claude/
@@ -32,13 +33,17 @@ intent.json
 *.log
 npm-debug.log*
 
-*/drift.json
-*/graph.json
-*/decisions.json
+# Generated test reports
+hedera-test-report.json
 
-*/impact.json
-*/intent.json
-*/proof.json
-*/authorization-receipt.json
-*/driftpack.json
+# Ignore artifacts in subdirectories except /artifacts/
+!artifacts/
+# src/*/drift.json
+# src/*/graph.json
+# src/*/decisions.json
+# src/*/impact.json
+# src/*/intent.json
+# src/*/proof.json
+# src/*/authorization-receipt.json
+# src/*/driftpack.json
 .dotto/*

@@ -123,17 +123,20 @@ interface AnalysisViewProps {
   onDecisionHistoryUpdate?: () => void;
   decisionHistory?: DecisionRecord[];
   onScenarioLoad?: (drifts: ScenarioDrift[]) => void;
-  onGraphUpdate?: (graph: SchemaGraph, drift?: {
-    detected: boolean;
-    changes: Array<{
-      type: string;
-      field: string;
-      from?: string;
-      to?: string;
-      breaking: boolean;
-      schemaName?: string;
-    }>;
-  }) => void;
+  onGraphUpdate?: (
+    graph: SchemaGraph,
+    drift?: {
+      detected: boolean;
+      changes: Array<{
+        type: string;
+        field: string;
+        from?: string;
+        to?: string;
+        breaking: boolean;
+        schemaName?: string;
+      }>;
+    }
+  ) => void;
 }
 
 interface InputArtifacts {
@@ -142,6 +145,25 @@ interface InputArtifacts {
   intent: unknown;
   decisions: unknown;
 }
+
+type EpochData = {
+  available: boolean;
+  submitted_epochs?: Array<{
+    epoch_id: number;
+    timestamp: string;
+    artifact_count: number;
+    merkle_root: string;
+    hashscan_link: string;
+  }>;
+};
+
+type AgentData = {
+  registered: boolean;
+  accountId: string | null;
+  inboundTopicId: string | null;
+  outboundTopicId: string | null;
+  network: string | null;
+};
 
 type TabId = "summary" | "context" | "systems";
 
@@ -176,6 +198,24 @@ export default function AnalysisViewApple({
     type: "accepted" | "overridden";
     override?: "approve" | "block";
   } | null>(null);
+
+  // Proof chain state
+  const [epochData, setEpochData] = useState<EpochData | null>(null);
+  const [agentData, setAgentData] = useState<AgentData | null>(null);
+
+  // Fetch epoch + agent data when a decision arrives (proof chain is always visible)
+  useEffect(() => {
+    if (decision?.receipt && !epochData) {
+      Promise.all([fetch(apiUrl("/hedera/epochs")), fetch(apiUrl("/hedera/agent"))])
+        .then(async ([epochRes, agentRes]) => {
+          setEpochData(await epochRes.json());
+          setAgentData(await agentRes.json());
+        })
+        .catch(() => {
+          // Data will show as "Not available"
+        });
+    }
+  }, [decision]);
 
   // Schema Drift Simulator state
   const [simulatorMode, setSimulatorMode] = useState(false);
@@ -214,10 +254,25 @@ export default function AnalysisViewApple({
             c.field === node.name || // Match by field name
             node.name.includes(c.field || "")
         );
+        // Check if this node is a downstream consumer of a breaking change
+        const isImpacted =
+          !hasBreaking &&
+          !hasChange &&
+          activeGraph.edges?.some(
+            (e) =>
+              e.target === node.id &&
+              activeDrift?.changes.some(
+                (c) =>
+                  c.breaking &&
+                  (c.schemaName === activeGraph.nodes[e.source]?.name ||
+                    c.field === activeGraph.nodes[e.source]?.name)
+              )
+          );
 
         let status: Artifact["status"] = "verified";
         if (hasBreaking) status = "drifted";
         else if (hasChange) status = "changed";
+        else if (isImpacted) status = "impacted";
 
         return {
           id: node.id,
@@ -349,9 +404,15 @@ export default function AnalysisViewApple({
   };
 
   // Handle file upload for before schema
+  const ALLOWED_EXTENSIONS = [".ts", ".tsx", ".json"];
   const handleBeforeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+      if (!ALLOWED_EXTENSIONS.includes(ext)) {
+        alert("Invalid file type. Only .ts, .tsx, .json allowed.");
+        return;
+      }
       // File size limit (1MB max) to prevent memory exhaustion
       const MAX_FILE_SIZE = 1024 * 1024;
       if (file.size > MAX_FILE_SIZE) {
@@ -387,6 +448,11 @@ export default function AnalysisViewApple({
   const handleAfterUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+      if (!ALLOWED_EXTENSIONS.includes(ext)) {
+        alert("Invalid file type. Only .ts, .tsx, .json allowed.");
+        return;
+      }
       // File size limit (1MB max) to prevent memory exhaustion
       const MAX_FILE_SIZE = 1024 * 1024;
       if (file.size > MAX_FILE_SIZE) {
@@ -654,7 +720,7 @@ export default function AnalysisViewApple({
           }
         : inputArtifacts?.drift;
 
-      await fetch(apiUrl("/feedback"), {
+      const feedbackRes = await fetch(apiUrl("/feedback"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -672,6 +738,18 @@ export default function AnalysisViewApple({
           drift: driftForServer,
         }),
       });
+      const feedbackData = await feedbackRes.json();
+      // Update decision with the new receipt (has real Hedera proof after authorize)
+      if (feedbackData.receipt && decision) {
+        console.log("[Proof Chain] Updating receipt from feedback:", {
+          hasHederaProof: !!feedbackData.receipt.hedera_proof,
+          demo: feedbackData.receipt.hedera_proof?.demo,
+          hasNftProof: !!feedbackData.receipt.nft_proof,
+        });
+        setDecision({ ...decision, receipt: feedbackData.receipt });
+      } else {
+        console.warn("[Proof Chain] No receipt in feedback response:", feedbackData);
+      }
       setHumanFeedback(outcome);
       if (override) setOverrideAction(override);
       onDecisionHistoryUpdate?.();
@@ -817,7 +895,7 @@ export default function AnalysisViewApple({
       <header className="apple-analysis__header">
         <div className="apple-analysis__brand">
           <GeminiSparkle size={20} />
-          <span className="apple-analysis__brand-text">Powered by Gemini 3</span>
+          <span className="apple-analysis__brand-text">AI-Powered Analysis</span>
         </div>
         <PipelinePanel
           decision={decision}
@@ -1238,7 +1316,7 @@ export default function AnalysisViewApple({
           onClick={() => setActiveTab("context")}
         >
           <GeminiSparkle size={14} />
-          Gemini Context
+          AI Context
         </button>
         <button
           className={`pill-tab ${activeTab === "systems" ? "pill-tab--active" : ""}`}
@@ -1257,16 +1335,15 @@ export default function AnalysisViewApple({
           <div className="tab-panel tab-panel--summary">
             {decision ? (
               <>
-                {/* Gemini Insight - The key observation, generated once and frozen */}
+                {/* 1. AI Insight + Recommendation — compact top section */}
                 <div
                   className={`gemini-insight ${humanFeedback ? "gemini-insight--superseded" : ""}`}
                 >
                   <div className="gemini-insight__header">
                     <GeminiSparkle size={20} />
-                    <h3>Gemini Insight</h3>
+                    <h3>AI Insight</h3>
                   </div>
                   <p className="gemini-insight__text">
-                    {/* Use the insight field if available (dynamic from Gemini), otherwise fallback */}
                     {decision.insight ? (
                       decision.insight
                     ) : decision.auto_authorized ? (
@@ -1281,17 +1358,12 @@ export default function AnalysisViewApple({
                       decision.reasoning?.[0] || "Analysis complete."
                     )}
                   </p>
-                  <span className="gemini-insight__provenance">
-                    Generated by Gemini during analysis. This insight is preserved as part of the
-                    decision record.
-                  </span>
                 </div>
 
-                {/* Gemini Recommendation - Not a judgment, superseded when human rules */}
                 <div
                   className={`gemini-recommendation ${humanFeedback ? "gemini-recommendation--superseded" : ""}`}
                 >
-                  <span className="gemini-recommendation__label">Gemini Recommendation:</span>
+                  <span className="gemini-recommendation__label">AI Recommendation:</span>
                   <span
                     className={`gemini-recommendation__action gemini-recommendation__action--${decision.decision}`}
                   >
@@ -1304,7 +1376,355 @@ export default function AnalysisViewApple({
                   <span className="gemini-recommendation__risk">({decision.risk_level} risk)</span>
                 </div>
 
-                {/* Supporting Evidence - Detailed reasoning */}
+                {/* 2. VERIFIABLE PROOF CHAIN — the differentiator, always visible */}
+                {decision.receipt && (
+                  <div className="proof-chain proof-chain--primary">
+                    <div className="proof-chain-header">
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        <path d="M9 12l2 2 4-4" />
+                      </svg>
+                      <h3 className="proof-chain-title">Verifiable Proof Chain</h3>
+                      {decision.receipt.hedera_proof?.demo && (
+                        <span className="proof-chain-demo-badge">
+                          Hedera not configured — preview only
+                        </span>
+                      )}
+                    </div>
+                    <div className="proof-chain-steps">
+                      {/* Step 1: Receipt Signed */}
+                      <div className="proof-chain-step">
+                        <div className="proof-chain-step__dot proof-chain-step__dot--receipt" />
+                        <div className="proof-chain-step__content">
+                          <div className="proof-chain-step__label">Receipt Signed</div>
+                          <div className="proof-chain-step__fields">
+                            <div className="proof-chain-step__field">
+                              <span className="proof-chain-step__field-label">Algorithm</span>
+                              <span className="proof-chain-step__field-value">
+                                {decision.receipt.algorithm || "hmac-sha256"}
+                              </span>
+                            </div>
+                            <div className="proof-chain-step__field">
+                              <span className="proof-chain-step__field-label">Signature</span>
+                              <span className="proof-chain-step__field-value">
+                                {decision.receipt.signature.slice(0, 24)}...
+                              </span>
+                            </div>
+                            <div className="proof-chain-step__field">
+                              <span className="proof-chain-step__field-label">Issued</span>
+                              <span className="proof-chain-step__field-value">
+                                {new Date(
+                                  decision.receipt.issued_at || decision.receipt.timestamp || ""
+                                ).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="proof-chain-step__field">
+                              <span className="proof-chain-step__field-label">Artifacts Hash</span>
+                              <span className="proof-chain-step__field-value">
+                                {decision.receipt.artifacts_hash.slice(0, 24)}...
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Step 2: HCS Anchored */}
+                      <div
+                        className={`proof-chain-step ${!decision.receipt.hedera_proof || decision.receipt.hedera_proof.demo ? "proof-chain-step--inactive" : ""}`}
+                      >
+                        <div className="proof-chain-step__dot proof-chain-step__dot--hcs" />
+                        <div className="proof-chain-step__content">
+                          <div className="proof-chain-step__label">Anchored to Hedera (HCS)</div>
+                          {decision.receipt.hedera_proof && !decision.receipt.hedera_proof.demo ? (
+                            <div className="proof-chain-step__fields">
+                              <div className="proof-chain-step__field">
+                                <span className="proof-chain-step__field-label">Topic</span>
+                                <span className="proof-chain-step__field-value">
+                                  {decision.receipt.hedera_proof.topic_id}
+                                </span>
+                              </div>
+                              <div className="proof-chain-step__field">
+                                <span className="proof-chain-step__field-label">Sequence</span>
+                                <span className="proof-chain-step__field-value">
+                                  #{decision.receipt.hedera_proof.sequence_number}
+                                </span>
+                              </div>
+                              <div className="proof-chain-step__field">
+                                <span className="proof-chain-step__field-label">Transaction</span>
+                                <span className="proof-chain-step__field-value">
+                                  {decision.receipt.hedera_proof.transaction_id}
+                                </span>
+                              </div>
+                              <a
+                                href={decision.receipt.hedera_proof.hashscan_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="proof-chain-step__link"
+                              >
+                                Verify on Hashscan
+                                <svg
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                  <polyline points="15 3 21 3 21 9" />
+                                  <line x1="10" y1="14" x2="21" y2="3" />
+                                </svg>
+                              </a>
+                            </div>
+                          ) : (
+                            <span className="proof-chain-step__inactive-text">
+                              {decision.receipt.hedera_proof?.demo
+                                ? "Hedera credentials not configured"
+                                : "Not anchored"}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Step 3: NFT Minted */}
+                      <div
+                        className={`proof-chain-step ${!decision.receipt.nft_proof || decision.receipt.nft_proof.demo ? "proof-chain-step--inactive" : ""}`}
+                      >
+                        <div className="proof-chain-step__dot proof-chain-step__dot--nft" />
+                        <div className="proof-chain-step__content">
+                          <div className="proof-chain-step__label">NFT Receipt Minted</div>
+                          {decision.receipt.nft_proof && !decision.receipt.nft_proof.demo ? (
+                            <div className="proof-chain-step__fields">
+                              <div className="proof-chain-step__field">
+                                <span className="proof-chain-step__field-label">Token</span>
+                                <span className="proof-chain-step__field-value">
+                                  {decision.receipt.nft_proof.token_id}
+                                </span>
+                              </div>
+                              <div className="proof-chain-step__field">
+                                <span className="proof-chain-step__field-label">Serial</span>
+                                <span className="proof-chain-step__field-value">
+                                  #{decision.receipt.nft_proof.serial_number}
+                                </span>
+                              </div>
+                              <a
+                                href={decision.receipt.nft_proof.hashscan_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="proof-chain-step__link"
+                              >
+                                Verify on Hashscan
+                                <svg
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                  <polyline points="15 3 21 3 21 9" />
+                                  <line x1="10" y1="14" x2="21" y2="3" />
+                                </svg>
+                              </a>
+                            </div>
+                          ) : (
+                            <span className="proof-chain-step__inactive-text">
+                              {decision.receipt.nft_proof?.demo
+                                ? "Hedera credentials not configured"
+                                : "Not minted"}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Step 4: Agent Identity Verified */}
+                      {(() => {
+                        const agent =
+                          decision.receipt.agent_identity ||
+                          (agentData?.registered ? agentData : null);
+                        const isDemo = decision.receipt.agent_identity?.demo;
+                        return (
+                          <div
+                            className={`proof-chain-step ${!agent || isDemo ? "proof-chain-step--inactive" : ""}`}
+                          >
+                            <div className="proof-chain-step__dot proof-chain-step__dot--agent" />
+                            <div className="proof-chain-step__content">
+                              <div className="proof-chain-step__label">
+                                Agent Identity Verified (HCS-10)
+                              </div>
+                              {agent && !isDemo ? (
+                                <div className="proof-chain-step__fields">
+                                  <div className="proof-chain-step__field">
+                                    <span className="proof-chain-step__field-label">Account</span>
+                                    <span className="proof-chain-step__field-value">
+                                      {"account_id" in agent
+                                        ? (agent as { account_id: string }).account_id
+                                        : (agent as AgentData).accountId}
+                                    </span>
+                                  </div>
+                                  <div className="proof-chain-step__field">
+                                    <span className="proof-chain-step__field-label">Inbound</span>
+                                    <span className="proof-chain-step__field-value">
+                                      {"inbound_topic" in agent
+                                        ? (agent as { inbound_topic: string }).inbound_topic
+                                        : (agent as AgentData).inboundTopicId}
+                                    </span>
+                                  </div>
+                                  <div className="proof-chain-step__field">
+                                    <span className="proof-chain-step__field-label">Outbound</span>
+                                    <span className="proof-chain-step__field-value">
+                                      {"outbound_topic" in agent
+                                        ? (agent as { outbound_topic: string }).outbound_topic
+                                        : (agent as AgentData).outboundTopicId}
+                                    </span>
+                                  </div>
+                                  <div className="proof-chain-step__field">
+                                    <span className="proof-chain-step__field-label">Registry</span>
+                                    <span className="proof-chain-step__field-value">
+                                      {"registry" in agent
+                                        ? (agent as { registry: string }).registry
+                                        : "HOL"}
+                                    </span>
+                                  </div>
+                                  <a
+                                    href={`https://hashscan.io/testnet/account/${"account_id" in agent ? (agent as { account_id: string }).account_id : (agent as AgentData).accountId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="proof-chain-step__link"
+                                  >
+                                    Verify on Hashscan
+                                    <svg
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                    >
+                                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                      <polyline points="15 3 21 3 21 9" />
+                                      <line x1="10" y1="14" x2="21" y2="3" />
+                                    </svg>
+                                  </a>
+                                </div>
+                              ) : (
+                                <span className="proof-chain-step__inactive-text">
+                                  {isDemo ? "Agent not registered" : "Not registered"}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Step 5: Merkle Epoch */}
+                      {(() => {
+                        const lastEpoch = epochData?.submitted_epochs?.slice(-1)[0];
+                        return (
+                          <div
+                            className={`proof-chain-step ${!lastEpoch ? "proof-chain-step--inactive" : ""}`}
+                          >
+                            <div className="proof-chain-step__dot proof-chain-step__dot--epoch" />
+                            <div className="proof-chain-step__content">
+                              <div className="proof-chain-step__label">Merkle Epoch Batched</div>
+                              {lastEpoch ? (
+                                <div className="proof-chain-step__fields">
+                                  <div className="proof-chain-step__field">
+                                    <span className="proof-chain-step__field-label">Epoch</span>
+                                    <span className="proof-chain-step__field-value">
+                                      #{lastEpoch.epoch_id}
+                                    </span>
+                                  </div>
+                                  <div className="proof-chain-step__field">
+                                    <span className="proof-chain-step__field-label">Artifacts</span>
+                                    <span className="proof-chain-step__field-value">
+                                      {lastEpoch.artifact_count} batched
+                                    </span>
+                                  </div>
+                                  <div className="proof-chain-step__field">
+                                    <span className="proof-chain-step__field-label">
+                                      Merkle Root
+                                    </span>
+                                    <span className="proof-chain-step__field-value">
+                                      {lastEpoch.merkle_root.slice(0, 24)}...
+                                    </span>
+                                  </div>
+                                  <a
+                                    href={lastEpoch.hashscan_link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="proof-chain-step__link"
+                                  >
+                                    Verify on Hashscan
+                                    <svg
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                    >
+                                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                      <polyline points="15 3 21 3 21 9" />
+                                      <line x1="10" y1="14" x2="21" y2="3" />
+                                    </svg>
+                                  </a>
+                                </div>
+                              ) : (
+                                <span className="proof-chain-step__inactive-text">
+                                  No epochs submitted yet
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Step 6: Key Management */}
+                      <div
+                        className={`proof-chain-step ${!decision.receipt.kms_key_id ? "proof-chain-step--inactive" : ""}`}
+                      >
+                        <div className="proof-chain-step__dot proof-chain-step__dot--kms" />
+                        <div className="proof-chain-step__content">
+                          <div className="proof-chain-step__label">Key Management (AWS KMS)</div>
+                          {decision.receipt.kms_key_id ? (
+                            <div className="proof-chain-step__fields">
+                              <div className="proof-chain-step__field">
+                                <span className="proof-chain-step__field-label">Key ID</span>
+                                <span className="proof-chain-step__field-value">
+                                  {decision.receipt.kms_key_id.slice(0, 20)}...
+                                </span>
+                              </div>
+                              <div className="proof-chain-step__field">
+                                <span className="proof-chain-step__field-label">Curve</span>
+                                <span className="proof-chain-step__field-value">
+                                  ECC_SECG_P256K1 (secp256k1)
+                                </span>
+                              </div>
+                              <div className="proof-chain-step__field">
+                                <span className="proof-chain-step__field-label">Storage</span>
+                                <span className="proof-chain-step__field-value">
+                                  AWS CloudHSM (FIPS 140-2)
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="proof-chain-step__fields">
+                              <div className="proof-chain-step__field">
+                                <span className="proof-chain-step__field-label">Mode</span>
+                                <span className="proof-chain-step__field-value">
+                                  HMAC-SHA256 (development)
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Supporting Evidence — collapsible, below proof */}
                 {decision.thinking ? (
                   <div
                     className={`thinking-card ${humanFeedback ? "thinking-card--superseded" : ""}`}
@@ -1327,9 +1747,7 @@ export default function AnalysisViewApple({
                       <div className="thinking-card__content">
                         <ReactMarkdown>
                           {decision.thinking
-                            // Remove or rename the Judgment section - it's now handled by Gemini Recommendation
                             .replace(/## Judgment[\s\S]*?(?=##|$)/gi, "")
-                            // Clean up any double line breaks
                             .replace(/\n{3,}/g, "\n\n")}
                         </ReactMarkdown>
                       </div>
@@ -1350,6 +1768,39 @@ export default function AnalysisViewApple({
                     </ul>
                   </div>
                 ) : null}
+
+                {/* 4. Precedent Match — if applicable */}
+                {decision.auto_authorized && decision.precedent_match && (
+                  <div className="precedent-card">
+                    <div className="precedent-card__badge">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Precedent Match
+                    </div>
+                    <div className="precedent-card__details">
+                      <div className="precedent-detail">
+                        <span className="precedent-detail__label">Precedent Ruling</span>
+                        <span className="precedent-detail__value">
+                          receipt {decision.precedent_match.change_id.slice(0, 20)}...
+                        </span>
+                      </div>
+                      <div className="precedent-detail">
+                        <span className="precedent-detail__label">Similarity Score</span>
+                        <span className="precedent-detail__value">
+                          {Math.round(decision.precedent_match.similarity * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               <div className="empty-card">
@@ -1357,40 +1808,7 @@ export default function AnalysisViewApple({
                   <GeminiSparkle size={40} />
                 </div>
                 <h3>Ready for Analysis</h3>
-                <p>Click "Run Governance" to start Gemini analysis</p>
-              </div>
-            )}
-
-            {/* Auto-authorized precedent info */}
-            {decision?.auto_authorized && decision.precedent_match && (
-              <div className="precedent-card">
-                <div className="precedent-card__badge">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  Precedent Match
-                </div>
-                <div className="precedent-card__details">
-                  <div className="precedent-detail">
-                    <span className="precedent-detail__label">Prior Decision</span>
-                    <span className="precedent-detail__value">
-                      {decision.precedent_match.change_id.slice(0, 20)}...
-                    </span>
-                  </div>
-                  <div className="precedent-detail">
-                    <span className="precedent-detail__label">Similarity</span>
-                    <span className="precedent-detail__value">
-                      {Math.round(decision.precedent_match.similarity * 100)}%
-                    </span>
-                  </div>
-                </div>
+                <p>Click &ldquo;Run Governance&rdquo; to start AI analysis</p>
               </div>
             )}
           </div>
@@ -1400,7 +1818,7 @@ export default function AnalysisViewApple({
           <div className="tab-panel tab-panel--context">
             <p className="context-intro">
               <GeminiSparkle size={16} />
-              Artifacts analyzed by Gemini to make the governance decision.
+              Artifacts analyzed by the AI to make the governance decision.
             </p>
             {inputArtifacts && (
               <div className="context-artifacts">

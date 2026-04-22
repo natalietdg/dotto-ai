@@ -5,12 +5,16 @@
  * Receipts are the primitive that makes Dotto an authority layer, not just a governance tool.
  *
  * Design principles:
- * - Receipts are cryptographically verifiable (HMAC-SHA256, upgradeable to asymmetric)
+ * - Receipts are cryptographically verifiable (HMAC-SHA256 or AWS KMS ECDSA)
  * - Receipts are immutable records of authorization decisions
  * - No production change without a valid receipt
  */
 
 import crypto from "node:crypto";
+import { HederaNFTService, type NftProof } from "../engine/proof/HederaNFTService.js";
+import { KMSSigner } from "./kms-signer.js";
+
+export type { NftProof } from "../engine/proof/HederaNFTService.js";
 
 export type ReceiptVersion = "1.0" | "1.1";
 
@@ -21,13 +25,16 @@ export type HederaProof = {
   transaction_id: string;
   timestamp: string;
   hashscan_link: string;
+  demo?: boolean;
 };
+
+export type ReceiptAlgorithm = "hmac-sha256" | "kms-ecdsa-sha256";
 
 export type AuthorizationReceipt = {
   // Metadata
   version: ReceiptVersion;
   issuer: string;
-  algorithm: "hmac-sha256";
+  algorithm: ReceiptAlgorithm;
   issued_at: string;
   expires_at: string | null;
 
@@ -48,8 +55,24 @@ export type AuthorizationReceipt = {
   artifacts_hash: string;
   signature: string;
 
+  // KMS provenance (optional - only if signed via AWS KMS)
+  kms_key_id?: string;
+
+  // Agent identity (optional - only if HCS-10 agent is registered)
+  agent_identity?: {
+    account_id: string;
+    inbound_topic: string;
+    outbound_topic: string;
+    network: string;
+    registry: "HOL";
+    demo?: boolean;
+  };
+
   // Hedera proof (optional - only if anchored)
   hedera_proof?: HederaProof;
+
+  // NFT proof (optional - only if minted on HTS)
+  nft_proof?: NftProof;
 };
 
 export type ReceiptPayload = Omit<AuthorizationReceipt, "signature">;
@@ -69,6 +92,41 @@ export type VerificationResult = {
 
 const DEFAULT_ISSUER = "dotto-ai/governor";
 const DEFAULT_EXPIRY_HOURS = 24;
+
+// ─── KMS Singleton ──────────────────────────────────────────────────────────
+
+let kmsSigner: KMSSigner | null = null;
+
+/**
+ * Initialize AWS KMS signing if credentials are configured.
+ * Returns true if KMS is active.
+ */
+export async function initializeKMS(): Promise<boolean> {
+  const keyId = process.env.AWS_KMS_KEY_ID;
+  const region = process.env.AWS_REGION;
+
+  if (!keyId || !region) return false;
+
+  try {
+    kmsSigner = new KMSSigner(keyId, region);
+    await kmsSigner.initialize();
+    return true;
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "unknown error";
+    console.error(`[KMS] Initialization failed: ${msg}`);
+    kmsSigner = null;
+    return false;
+  }
+}
+
+/**
+ * Get the KMS signer instance (for API endpoints and Hedera tx signing).
+ */
+export function getKMSSigner(): KMSSigner | null {
+  return kmsSigner?.isReady() ? kmsSigner : null;
+}
+
+// ─── HMAC Signing (sync) ────────────────────────────────────────────────────
 
 /**
  * Get the signing key from environment.
@@ -100,6 +158,14 @@ function getSigningKey(): string {
 }
 
 /**
+ * Sign a receipt payload using HMAC-SHA256 (sync).
+ */
+function hmacSign(payload: ReceiptPayload): string {
+  const secret = getSigningKey();
+  return crypto.createHmac("sha256", secret).update(JSON.stringify(payload)).digest("hex");
+}
+
+/**
  * Compute SHA-256 hash of artifacts for integrity verification.
  */
 export function computeArtifactsHash(artifacts: unknown): string {
@@ -107,20 +173,34 @@ export function computeArtifactsHash(artifacts: unknown): string {
   return crypto.createHash("sha256").update(content).digest("hex");
 }
 
+// ─── Dual-Path Signing ──────────────────────────────────────────────────────
+
 /**
- * Sign a receipt payload using HMAC-SHA256.
+ * Sign a receipt payload. Uses KMS ECDSA when available, HMAC-SHA256 otherwise.
  */
-export function signPayload(payload: ReceiptPayload): string {
-  const secret = getSigningKey();
-  return crypto.createHmac("sha256", secret).update(JSON.stringify(payload)).digest("hex");
+export async function signPayload(payload: ReceiptPayload): Promise<string> {
+  if (kmsSigner?.isReady()) {
+    return kmsSigner.sign(JSON.stringify(payload));
+  }
+  return hmacSign(payload);
 }
 
 /**
- * Verify a receipt signature.
+ * Verify a receipt signature. Detects algorithm and uses the correct path.
  */
 export function verifySignature(receipt: AuthorizationReceipt): boolean {
   const { signature, ...payload } = receipt;
-  const expectedSignature = signPayload(payload as ReceiptPayload);
+
+  if (receipt.algorithm === "kms-ecdsa-sha256") {
+    const signer = getKMSSigner();
+    if (!signer) {
+      throw new Error("KMS not configured but receipt requires KMS verification");
+    }
+    return signer.verify(JSON.stringify(payload), signature);
+  }
+
+  // HMAC path (sync)
+  const expectedSignature = hmacSign(payload as ReceiptPayload);
   return crypto.timingSafeEqual(
     Buffer.from(signature, "hex"),
     Buffer.from(expectedSignature, "hex")
@@ -152,15 +232,17 @@ export type CreateReceiptOptions = {
 
 /**
  * Create a new authorization receipt.
+ * Uses AWS KMS ECDSA signing when configured, HMAC-SHA256 otherwise.
  */
-export function createReceipt(options: CreateReceiptOptions): AuthorizationReceipt {
+export async function createReceipt(options: CreateReceiptOptions): Promise<AuthorizationReceipt> {
   const now = new Date();
   const expiryHours = options.expiry_hours ?? DEFAULT_EXPIRY_HOURS;
+  const useKMS = kmsSigner?.isReady() ?? false;
 
   const payload: ReceiptPayload = {
     version: "1.1",
     issuer: options.issuer ?? DEFAULT_ISSUER,
-    algorithm: "hmac-sha256",
+    algorithm: useKMS ? "kms-ecdsa-sha256" : "hmac-sha256",
     issued_at: now.toISOString(),
     expires_at: expiryHours
       ? new Date(now.getTime() + expiryHours * 60 * 60 * 1000).toISOString()
@@ -173,11 +255,12 @@ export function createReceipt(options: CreateReceiptOptions): AuthorizationRecei
     artifacts_hash: computeArtifactsHash(options.artifacts),
   };
 
-  const signature = signPayload(payload);
+  const signature = useKMS ? await kmsSigner!.sign(JSON.stringify(payload)) : hmacSign(payload);
 
   return {
     ...payload,
     signature,
+    ...(useKMS ? { kms_key_id: kmsSigner!.getKeyInfo().keyId } : {}),
   };
 }
 
@@ -349,7 +432,7 @@ export async function anchorReceiptToHedera(
 
   try {
     // Dynamic import to avoid issues if @hashgraph/sdk is not installed
-    const { Client, TopicMessageSubmitTransaction, AccountId, PrivateKey } =
+    const { Client, TopicMessageSubmitTransaction, AccountId, PrivateKey, PublicKey } =
       await import("@hashgraph/sdk");
 
     const network = process.env.HEDERA_NETWORK || "testnet";
@@ -367,6 +450,7 @@ export async function anchorReceiptToHedera(
       artifacts_hash: receipt.artifacts_hash,
       signature: receipt.signature,
       issued_at: receipt.issued_at,
+      ...(receipt.kms_key_id ? { kms_key_id: receipt.kms_key_id } : {}),
     });
 
     const transaction = new TopicMessageSubmitTransaction({
@@ -374,7 +458,23 @@ export async function anchorReceiptToHedera(
       message: message,
     });
 
-    const response = await transaction.execute(client);
+    // Sign with KMS if available, otherwise use operator key
+    let response;
+    if (kmsSigner?.isReady()) {
+      const pubKeyDer = kmsSigner.getPublicKeyDer();
+      const publicKey = PublicKey.fromBytesECDSA(pubKeyDer);
+      const frozenTx = transaction.freezeWith(client);
+      // Use SDK's signWith — it passes the correct transaction body hash
+      await frozenTx.signWith(publicKey, async (message: Uint8Array) => {
+        const digest = crypto.createHash("sha256").update(message).digest();
+        return kmsSigner!.signBytes(digest);
+      });
+      response = await frozenTx.execute(client);
+      console.log("[KMS] Hedera transaction signed via AWS KMS");
+    } else {
+      response = await transaction.execute(client);
+    }
+
     const txReceipt = await response.getReceipt(client);
 
     const transactionId = response.transactionId.toString();
@@ -391,15 +491,82 @@ export async function anchorReceiptToHedera(
         sequence_number: sequenceNumber,
         transaction_id: transactionId,
         timestamp: new Date().toISOString(),
-        hashscan_link: `https://hashscan.io/${network}/topic/${topicId}/message/${sequenceNumber}`,
+        hashscan_link: `https://hashscan.io/${network}/transaction/${transactionId}`,
       },
     };
 
     console.log(`✅ Receipt anchored to Hedera: ${anchoredReceipt.hedera_proof!.hashscan_link}`);
+
+    // Mint NFT for approved receipts
+    if (receipt.ruling === "approve") {
+      try {
+        const nftResult = await mintReceiptNFT(anchoredReceipt);
+        if (nftResult) {
+          anchoredReceipt.nft_proof = nftResult;
+        }
+      } catch (nftError) {
+        console.error("Failed to mint receipt NFT:", nftError);
+        // Continue without NFT - HCS anchor is the primary proof
+      }
+    }
 
     return anchoredReceipt;
   } catch (error) {
     console.error("Failed to anchor receipt to Hedera:", error);
     return receipt;
   }
+}
+
+// Singleton NFT service instance (initialized lazily)
+let nftService: HederaNFTService | null = null;
+let nftInitPromise: Promise<void> | null = null;
+
+/**
+ * Get or initialize the NFT service singleton.
+ */
+async function getNFTService(): Promise<HederaNFTService | null> {
+  if (nftService?.isReady()) return nftService;
+
+  // Prevent concurrent initialization
+  if (nftInitPromise) {
+    await nftInitPromise;
+    return nftService;
+  }
+
+  try {
+    nftService = new HederaNFTService();
+    nftInitPromise = nftService.initialize();
+    await nftInitPromise;
+    nftInitPromise = null;
+    return nftService;
+  } catch (error) {
+    console.warn("[NFT] Service initialization failed:", error);
+    nftInitPromise = null;
+    nftService = null;
+    return null;
+  }
+}
+
+/**
+ * Mint a governance receipt as an NFT on Hedera Token Service.
+ */
+async function mintReceiptNFT(receipt: AuthorizationReceipt): Promise<NftProof | null> {
+  const service = await getNFTService();
+  if (!service) return null;
+
+  const baseUrl = process.env.DOTTO_BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
+
+  return service.mintGovernanceReceipt({
+    change_id: receipt.change_id,
+    ruling: receipt.ruling,
+    risk_level: receipt.risk_level,
+    receipt_url: `${baseUrl}/receipts/${encodeURIComponent(receipt.change_id)}`,
+  });
+}
+
+/**
+ * Get the NFT service instance (for API endpoints).
+ */
+export function getNFTServiceInstance(): HederaNFTService | null {
+  return nftService;
 }

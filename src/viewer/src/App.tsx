@@ -71,6 +71,8 @@ function App() {
     reasoning: string[];
     conditions?: string[];
     thinking?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    receipt?: any;
   } | null>(null);
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [pipelineChangeId, setPipelineChangeId] = useState<string>(`local-${Date.now()}`);
@@ -158,12 +160,17 @@ function App() {
     ) {
       return "Connectivity constraint. Governance engine unreachable.";
     }
-    // Strip any raw error patterns that slip through
-    return text
+    // Rewrite Gemini analysis patterns into governance language
+    let cleaned = text
+      .replace(/CRITICAL FAILURE:\s*/gi, "Missing developer intent — ")
+      .replace(/proposed change introduces\s*/gi, "Change introduces ")
       .replace(/\[GoogleGenerativeAI Error\][^.]*\./g, "")
       .replace(/error=\[[^\]]*\]/g, "")
       .replace(/https?:\/\/[^\s]+/g, "")
+      // Strip any HTML tags as defense-in-depth (React escapes JSX, but belt + suspenders)
+      .replace(/<[^>]*>/g, "")
       .trim();
+    return cleaned;
   };
 
   // Parse Gemini's thinking into structured sections for the modal
@@ -301,6 +308,11 @@ function App() {
 
       if (!response.ok) {
         throw new Error(`Feedback submission failed: ${response.status}`);
+      }
+
+      const feedbackData = await response.json();
+      if (feedbackData.receipt && pipelineDecision) {
+        setPipelineDecision({ ...pipelineDecision, receipt: feedbackData.receipt });
       }
 
       setHumanFeedback(outcome);
@@ -675,89 +687,99 @@ function App() {
   );
 
   // Handle graph updates from uploaded schemas
-  const handleGraphUpdate = useCallback((graph: SchemaGraph, drift?: {
-    detected: boolean;
-    changes: Array<{
-      type: string;
-      field: string;
-      from?: string;
-      to?: string;
-      breaking: boolean;
-      schemaName?: string;
-    }>;
-  }) => {
-    // Build a map of which nodes depend on each node (incoming edges)
-    const incomingEdges = new Map<string, string[]>();
-    graph.edges.forEach((edge) => {
-      // For the graph visualization, we need to know what depends on this node
-      // edge.source depends on edge.target
-      if (!incomingEdges.has(edge.target)) {
-        incomingEdges.set(edge.target, []);
+  const handleGraphUpdate = useCallback(
+    (
+      graph: SchemaGraph,
+      drift?: {
+        detected: boolean;
+        changes: Array<{
+          type: string;
+          field: string;
+          from?: string;
+          to?: string;
+          breaking: boolean;
+          schemaName?: string;
+        }>;
       }
-      incomingEdges.get(edge.target)!.push(edge.source);
-    });
-
-    // Build a map of schema names to their drift status
-    const schemaBreakingMap = new Map<string, boolean>();
-    const schemaChangedMap = new Map<string, boolean>();
-    
-    if (drift?.changes) {
-      drift.changes.forEach((change) => {
-        if (change.schemaName) {
-          if (change.breaking) {
-            schemaBreakingMap.set(change.schemaName, true);
-          } else {
-            schemaChangedMap.set(change.schemaName, true);
-          }
+    ) => {
+      // Build a map of which nodes depend on each node (incoming edges)
+      const incomingEdges = new Map<string, string[]>();
+      graph.edges.forEach((edge) => {
+        // For the graph visualization, we need to know what depends on this node
+        // edge.source depends on edge.target
+        if (!incomingEdges.has(edge.target)) {
+          incomingEdges.set(edge.target, []);
         }
+        incomingEdges.get(edge.target)!.push(edge.source);
       });
-    }
 
-    // Convert SchemaGraph to artifacts for display
-    const newArtifacts: Artifact[] = Object.values(graph.nodes).map((node) => {
-      // Determine status based on drift
-      let status: Artifact["status"] = "verified";
-      if (schemaBreakingMap.has(node.name)) {
-        status = "drifted";
-      } else if (schemaChangedMap.has(node.name)) {
-        status = "changed";
+      // Build a map of schema names to their drift status
+      const schemaBreakingMap = new Map<string, boolean>();
+      const schemaChangedMap = new Map<string, boolean>();
+
+      if (drift?.changes) {
+        drift.changes.forEach((change) => {
+          if (change.schemaName) {
+            if (change.breaking) {
+              schemaBreakingMap.set(change.schemaName, true);
+            } else {
+              schemaChangedMap.set(change.schemaName, true);
+            }
+          }
+        });
       }
 
-      // Find all changes for this schema
-      const schemaChanges = drift?.changes.filter(c => c.schemaName === node.name) || [];
-      
-      return {
-        id: node.id,
-        name: node.name,
-        status,
-        dependencies: incomingEdges.get(node.id) || [],
-        hash: "",
-        file: node.filePath,
-        lastModified: new Date().toISOString(),
-        metadata: schemaChanges.length > 0 ? {
-          breaking: status === "drifted",
-          drift: {
-            nodeId: node.id,
-            name: node.name,
-            type: "schema",
-            changeType: (status === "drifted" || status === "changed") ? "modified" : "unchanged",
-            breaking: status === "drifted",
-            changes: schemaChanges.map(c => ({
-              type: "field_type_changed" as const,
-              path: c.field,
-              oldValue: c.from,
-              newValue: c.to,
-              breaking: c.breaking,
-              description: `${c.type} on ${c.field}${c.from ? ` (${c.from} → ${c.to})` : ''}`,
-            })),
-          },
-        } : {},
-      };
-    });
+      // Convert SchemaGraph to artifacts for display
+      const newArtifacts: Artifact[] = Object.values(graph.nodes).map((node) => {
+        // Determine status based on drift
+        let status: Artifact["status"] = "verified";
+        if (schemaBreakingMap.has(node.name)) {
+          status = "drifted";
+        } else if (schemaChangedMap.has(node.name)) {
+          status = "changed";
+        }
 
-    setArtifacts(newArtifacts);
-    setLastUpdate(new Date());
-  }, []);
+        // Find all changes for this schema
+        const schemaChanges = drift?.changes.filter((c) => c.schemaName === node.name) || [];
+
+        return {
+          id: node.id,
+          name: node.name,
+          status,
+          dependencies: incomingEdges.get(node.id) || [],
+          hash: "",
+          file: node.filePath,
+          lastModified: new Date().toISOString(),
+          metadata:
+            schemaChanges.length > 0
+              ? {
+                  breaking: status === "drifted",
+                  drift: {
+                    nodeId: node.id,
+                    name: node.name,
+                    type: "schema",
+                    changeType:
+                      status === "drifted" || status === "changed" ? "modified" : "unchanged",
+                    breaking: status === "drifted",
+                    changes: schemaChanges.map((c) => ({
+                      type: "field_type_changed" as const,
+                      path: c.field,
+                      oldValue: c.from,
+                      newValue: c.to,
+                      breaking: c.breaking,
+                      description: `${c.type} on ${c.field}${c.from ? ` (${c.from} → ${c.to})` : ""}`,
+                    })),
+                  },
+                }
+              : {},
+        };
+      });
+
+      setArtifacts(newArtifacts);
+      setLastUpdate(new Date());
+    },
+    []
+  );
 
   // Handle scenario drift updates from AnalysisView
   const handleScenarioLoad = useCallback(
@@ -883,7 +905,9 @@ function App() {
     <div className="app">
       <header className="header">
         <div className="header-left">
-          <h1 className="logo">dotto.</h1>
+          <h1 className="logo">
+            <span className="logo-text">dotto.</span>
+          </h1>
           <span className="logo-tag">AI governor</span>
         </div>
 
@@ -1157,7 +1181,7 @@ function App() {
             <div className="history-header">
               <h2 className="history-title">Decision History</h2>
               <p className="history-subtitle">
-                Past decisions are sent to Gemini 3 as <code>memory.json</code> — a deterministic
+                Past decisions are sent to the AI as <code>memory.json</code> — a deterministic
                 input that enables precedent-based reasoning.
               </p>
             </div>
@@ -1234,7 +1258,7 @@ function App() {
             )}
 
             <div className="history-note">
-              <strong>How this enables learning:</strong> On each pipeline run, Gemini receives this
+              <strong>How this enables learning:</strong> On each pipeline run, the AI receives this
               history and reasons: "Similar changes were previously{" "}
               {decisionHistory[0]?.human_feedback.outcome || "handled"} — adjusting judgment
               accordingly."
@@ -1327,7 +1351,7 @@ function App() {
               This decision exceeds automation authority.
             </h2>
             <p className="governance-tension__subtitle">
-              Governance Conflict Detected — rule-based systems cannot resolve this.
+              Policy conflict detected — deterministic rules cannot resolve this decision.
             </p>
 
             <div className="governance-tension__conflicts">
@@ -1417,13 +1441,15 @@ function App() {
               <div className="conclusion__arrow">→</div>
               <div className="conclusion__text">
                 <strong>No automated path forward exists.</strong>
-                <span>Dotto blocks deployment until a ruling is recorded.</span>
+                <span>Production cannot change without a recorded authorization receipt.</span>
               </div>
             </div>
 
             <div className="governance-tension__divider">
               <span className="divider__line"></span>
-              <span className="divider__text">Everything above is advisory</span>
+              <span className="divider__text">
+                AI analysis is advisory. Human authorization is binding.
+              </span>
               <span className="divider__line"></span>
             </div>
 
@@ -1439,7 +1465,7 @@ function App() {
                 >
                   <span className="authority-btn__icon">✓</span>
                   <span className="authority-btn__label">Approve</span>
-                  <span className="authority-btn__desc">Override Gemini → Allow change</span>
+                  <span className="authority-btn__desc">Override AI → Allow change</span>
                 </button>
                 <button
                   className="authority-btn authority-btn--accept"
@@ -1459,7 +1485,7 @@ function App() {
                 >
                   <span className="authority-btn__icon">✕</span>
                   <span className="authority-btn__label">Block</span>
-                  <span className="authority-btn__desc">Override Gemini → Reject change</span>
+                  <span className="authority-btn__desc">Override AI → Reject change</span>
                 </button>
               </div>
               <p className="actions__note">
@@ -1471,7 +1497,7 @@ function App() {
       )}
 
       {/* Onboarding Tour */}
-      <OnboardingTour forceShow={showTour} onComplete={() => setShowTour(false)} />
+      {/* <OnboardingTour forceShow={showTour} onComplete={() => setShowTour(false)} /> */}
 
       {/* Keyboard Shortcuts Modal */}
       <KeyboardShortcutsModal

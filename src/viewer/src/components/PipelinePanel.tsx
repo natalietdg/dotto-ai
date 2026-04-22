@@ -3,6 +3,32 @@ import { Tooltip } from "./Tooltip";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { apiUrl } from "../config/api";
 
+type HederaProof = {
+  backend: string;
+  topic_id: string;
+  sequence_number: string;
+  transaction_id: string;
+  timestamp: string;
+  hashscan_link: string;
+  demo?: boolean;
+};
+
+type NftProof = {
+  token_id: string;
+  serial_number: string;
+  hashscan_link: string;
+  demo?: boolean;
+};
+
+type AgentIdentity = {
+  account_id: string;
+  inbound_topic: string;
+  outbound_topic: string;
+  network: string;
+  registry: "HOL";
+  demo?: boolean;
+};
+
 type AuthorizationReceipt = {
   version: string;
   issuer?: string;
@@ -21,6 +47,10 @@ type AuthorizationReceipt = {
   };
   artifacts_hash: string;
   signature: string;
+  kms_key_id?: string;
+  agent_identity?: AgentIdentity;
+  hedera_proof?: HederaProof;
+  nft_proof?: NftProof;
 };
 
 type GovernorDecision = {
@@ -359,6 +389,40 @@ export default function PipelinePanel({
                               {decision.receipt!.signature.slice(0, 16)}...
                             </span>
                           </div>
+                          {decision.receipt!.agent_identity && (
+                            <>
+                              <div className="receipt-tooltip__divider" />
+                              <div className="receipt-tooltip__row">
+                                <span className="receipt-tooltip__label">Agent:</span>
+                                <span className="receipt-tooltip__hash">
+                                  {decision.receipt!.agent_identity.account_id}
+                                </span>
+                              </div>
+                              <div className="receipt-tooltip__row">
+                                <span className="receipt-tooltip__label">Registry:</span>
+                                <span>{decision.receipt!.agent_identity.registry}</span>
+                              </div>
+                              <div className="receipt-tooltip__row">
+                                <span className="receipt-tooltip__label">Network:</span>
+                                <span>{decision.receipt!.agent_identity.network}</span>
+                              </div>
+                            </>
+                          )}
+                          {decision.receipt!.kms_key_id && (
+                            <>
+                              <div className="receipt-tooltip__divider" />
+                              <div className="receipt-tooltip__row">
+                                <span className="receipt-tooltip__label">KMS Key:</span>
+                                <span className="receipt-tooltip__hash">
+                                  {decision.receipt!.kms_key_id.slice(0, 20)}...
+                                </span>
+                              </div>
+                              <div className="receipt-tooltip__row">
+                                <span className="receipt-tooltip__label">Algorithm:</span>
+                                <span>{decision.receipt!.algorithm}</span>
+                              </div>
+                            </>
+                          )}
                         </div>
                       }
                       position="bottom"
@@ -378,6 +442,82 @@ export default function PipelinePanel({
                         Signed Receipt
                       </span>
                     </Tooltip>
+                  )}
+                  {decision?.receipt?.hedera_proof && (
+                    <a
+                      href={decision.receipt.hedera_proof.hashscan_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="receipt-badge receipt-badge--hedera"
+                      style={{ textDecoration: "none" }}
+                    >
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                      </svg>
+                      HCS Anchored
+                    </a>
+                  )}
+                  {decision?.receipt?.nft_proof && (
+                    <a
+                      href={decision.receipt.nft_proof.hashscan_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="receipt-badge receipt-badge--nft"
+                      style={{ textDecoration: "none" }}
+                    >
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <path d="M9 12l2 2 4-4" />
+                      </svg>
+                      NFT #{decision.receipt.nft_proof.serial_number}
+                    </a>
+                  )}
+                  {decision?.receipt?.agent_identity && (
+                    <span className="receipt-badge receipt-badge--agent">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                      Agent Verified
+                    </span>
+                  )}
+                  {decision?.receipt?.kms_key_id && (
+                    <span className="receipt-badge receipt-badge--kms">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
+                      KMS Signed
+                    </span>
                   )}
                   {isDeferred && (
                     <span className="audit-badge">
